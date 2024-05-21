@@ -95,6 +95,7 @@ void GUI::InitialiseBoard() {
 
    
 void GUI::LoadPieceTextures() {
+
     std::vector<std::string> filenames = {"wP", "wR", "wN", "wB", "wQ", "wK",
                                           "bP", "bR", "bN", "bB", "bQ", "bK"};
 
@@ -149,6 +150,7 @@ void GUI::RenderBoard(int clickCount, int clickIdx) {
                 SDL_SetRenderDrawColor(renderer, 0, 0, 200, SDL_ALPHA_OPAQUE);
                 SDL_RenderFillRect(renderer, &boardDest[i][j]);
             }
+            
             // Dark squares
             else if ((i + j) % 2) {
                 SDL_SetRenderDrawColor(renderer, 50, 50, 50, SDL_ALPHA_OPAQUE);

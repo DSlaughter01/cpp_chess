@@ -4,9 +4,8 @@
 int main(int argc, char** args) {
     
     Game game;
-    GUI gui;
 
-    game.GameLoop(gui);
+    game.GameLoop();
 
     return 0;
 }

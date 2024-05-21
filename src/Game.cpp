@@ -385,7 +385,7 @@ void Game::UpdateVariablesAfterMove() {
 }
 
 
-void Game::GameLoop(GUI &gui) {
+void Game::GameLoop() {
 
     std::vector<int> boardDimensions = gui.GetBoardDimensions();
     boardX = boardDimensions[0];

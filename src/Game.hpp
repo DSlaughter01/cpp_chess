@@ -10,7 +10,7 @@
 #include <sstream>
 #include "SDL2/SDL.h"
 #include "GUI.hpp"
-#include "PieceMoves.hpp"
+#include "MoveGeneration.hpp"
 
 class Game {
 
@@ -19,9 +19,12 @@ class Game {
         Game();
         ~Game();
     
-        void GameLoop(GUI &gui);
+        void GameLoop();
 
     private:
+
+        GUI gui;
+
         /* VARIABLE INITIALISATION */
         void InitialiseBitboards();
         void InitialiseFenConversionMaps();
