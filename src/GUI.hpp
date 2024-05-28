@@ -4,6 +4,7 @@
 #include <array>
 #include <vector>
 #include <map>
+#include <cstdint>
 
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_image.h"
@@ -13,7 +14,7 @@ class GUI {
         GUI();
         ~GUI();
 
-        void RenderScreen(std::string &fenString, int clickCount, int clickIdx);
+        void RenderScreen(std::string &fenString, int clickCount, int clickIdx, uint64_t possibleMoves);
 
         // Returns {x, y, w, h}
         std::vector<int> GetBoardDimensions();
@@ -22,8 +23,8 @@ class GUI {
         void InitialiseCharToTextureMap();
         void InitialiseBoard();
         void LoadPieceTextures();
-            
-        void RenderBoard(int clickCount, int clickIdx);
+
+        void RenderBoard(int clickCount, int clickIdx, uint64_t possibleMoves);
         void RenderPieces(std::string &fenString);
 
     private:

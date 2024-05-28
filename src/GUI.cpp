@@ -131,7 +131,7 @@ void GUI::LoadPieceTextures() {
 }
 
 
-void GUI::RenderBoard(int clickCount, int clickIdx) {
+void GUI::RenderBoard(int clickCount, int clickIdx, uint64_t possibleMoves) {
 
     int clicki = INVALID_CLICK_IDX;
     int clickj = INVALID_CLICK_IDX;
@@ -148,6 +148,12 @@ void GUI::RenderBoard(int clickCount, int clickIdx) {
             // Highlight the square the user has clicked on
             if (i == clicki && j == clickj) {
                 SDL_SetRenderDrawColor(renderer, 0, 0, 200, SDL_ALPHA_OPAQUE);
+                SDL_RenderFillRect(renderer, &boardDest[i][j]);
+            }
+
+            // Highlight possible moves
+            else if ((possibleMoves & (1ULL << (i + j * 8))) != 0) {
+                SDL_SetRenderDrawColor(renderer, 50, 200, 200, SDL_ALPHA_OPAQUE);
                 SDL_RenderFillRect(renderer, &boardDest[i][j]);
             }
             
@@ -195,10 +201,10 @@ void GUI::RenderPieces(std::string &fenString) {
 }
 
 
-void GUI::RenderScreen(std::string &fenString, int clickCount, int clickIdx) {
+void GUI::RenderScreen(std::string &fenString, int clickCount, int clickIdx, uint64_t possibleMoves) {
     SDL_RenderClear(renderer);
 
-    RenderBoard(clickCount, clickIdx);
+    RenderBoard(clickCount, clickIdx, possibleMoves);
     RenderPieces(fenString);
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
 

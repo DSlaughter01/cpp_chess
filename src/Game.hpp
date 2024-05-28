@@ -24,6 +24,7 @@ class Game {
     private:
 
         GUI gui;
+        MoveGeneration moveGeneration;
 
         /* VARIABLE INITIALISATION */
         void InitialiseBitboards();
@@ -46,12 +47,17 @@ class Game {
         int GetClickSquareIdx();
         void SetClickSquareIdx(int clickIdx, bool changeFocus = false);
 
+        int FindPieceIdx(int clickIdx);
+        void LookUpPossibleMoves();
         void MovePiece(bool isOpponentPiece);
         void UpdateVariablesAfterMove();
         
     public:
 
-    private:      
+    private: 
+
+        uint64_t possibleMoves;  
+
         // Looping bools for game state
         bool isRunning;
         bool isGameOver;
@@ -60,6 +66,9 @@ class Game {
         int clickCount;
         int firstClickIdx;
         int secondClickIdx;
+
+        int srcPieceVectorIdx;
+        int destPieceVectorIdx;
 
         int boardX, boardY, boardW, boardH, squareDim;
 
@@ -80,7 +89,7 @@ class Game {
 
         // Bitboards
         uint64_t wP, wR, wN, wB, wQ, wK;
-        uint64_t bP, bR,  bN, bB, bQ, bK;
+        uint64_t bP, bR, bN, bB, bQ, bK;
         uint64_t whitePieceBitboard, blackPieceBitboard, allPieceBitboard;
         std::vector<uint64_t*> pieceVector {};
 

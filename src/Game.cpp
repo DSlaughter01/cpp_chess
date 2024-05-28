@@ -4,6 +4,7 @@ Game::Game() :
     isRunning(true), isGameOver(false), 
     clickCount(0), firstClickIdx(INVALID_CLICK_IDX), secondClickIdx(INVALID_CLICK_IDX),
     boardX(0), boardY(0), boardW(0), boardH(0), squareDim(0),
+    possibleMoves(0ULL), srcPieceVectorIdx(-1), destPieceVectorIdx(-1),
     wP(0ULL), wR(0ULL), wN(0ULL), wB(0ULL), wQ(0ULL), wK(0ULL), 
     bP(0ULL), bR(0ULL),  bN(0ULL), bB(0ULL), bQ(0ULL), bK(0ULL),
     currentFen(initialFen), castlingRights({}), enPassantTarget("-")
@@ -232,8 +233,11 @@ void Game::HandleFirstClickEvent() {
     // Nothing happens if the player's first click is not on their own piece
     bool isOwnPiece = CheckIsOwnPiece(clickIdx);
 
-    if (isOwnPiece)
+    if (isOwnPiece) {
         SetClickSquareIdx(clickIdx);
+        srcPieceVectorIdx = FindPieceIdx(firstClickIdx);
+        LookUpPossibleMoves();
+    }
 }
 
 
@@ -250,17 +254,27 @@ void Game::HandleSecondClickEvent() {
     // If the user clicks on one of their own pieces again, change the focus
     bool isOwnPiece = CheckIsOwnPiece(clickIdx);
     bool isOpponentPiece = CheckIsOpponentPiece(clickIdx);
-    // bool isEmpty = !(isOwnPiece || isOpponentPiece);
 
     SetClickSquareIdx(clickIdx, isOwnPiece);
 
-    // TODO: Check if it is a valid move, and move accordingly
-    if (clickCount == 2) {
-        MovePiece(isOpponentPiece);
-        ResetClickVariables();
-    }  
-}
+    if (isOwnPiece) {
+        srcPieceVectorIdx = FindPieceIdx(firstClickIdx);
+        LookUpPossibleMoves();
+    }
 
+    // Check if it is a valid move, and move accordingly
+    if (clickCount == 2) {
+        destPieceVectorIdx = FindPieceIdx(secondClickIdx);
+        if (moveGeneration.CheckCanMakeMove(secondClickIdx, possibleMoves)) {
+            MovePiece(isOpponentPiece);
+            ResetClickVariables();
+            possibleMoves = 0ULL;
+        }
+        else {
+            clickCount = 1;
+        }
+    }
+}
 
 void Game::ResetClickVariables() {
 
@@ -307,60 +321,71 @@ void Game::SetClickSquareIdx(int clickIdx, bool changeFocus) {
 }
 
 
+int Game::FindPieceIdx(int clickIdx) {
+
+    // Get the correct piece type
+    for (int i = 0; i < 12; i++) {
+        if ((*pieceVector[i] & (1ULL << clickIdx)) != 0ULL)
+            return i;     
+    }
+
+    return -1;
+}
+
+
+void Game::LookUpPossibleMoves() {
+
+    switch (srcPieceVectorIdx) {
+        case 0 :
+            possibleMoves = moveGeneration.whitePawnLookupTable[firstClickIdx];
+            possibleMoves = moveGeneration.CheckForPawnTake(firstClickIdx, possibleMoves, activeColour, blackPieceBitboard);
+            break;
+
+        case 2: 
+            possibleMoves = moveGeneration.knightLookupTable[firstClickIdx];
+            break;
+
+        case 5 :
+            possibleMoves = moveGeneration.kingLookupTable[firstClickIdx];
+            break;
+
+        case 6 :
+            possibleMoves = moveGeneration.blackPawnLookupTable[firstClickIdx];
+            possibleMoves = moveGeneration.CheckForPawnTake(firstClickIdx, possibleMoves, activeColour, whitePieceBitboard);
+            break;
+
+        case 8 : 
+            possibleMoves = moveGeneration.knightLookupTable[firstClickIdx];
+            break;
+
+        case 11 :
+            possibleMoves = moveGeneration.kingLookupTable[firstClickIdx];
+            break;
+    }
+
+    // Remove squares which are occupied by a player's own pieces
+    possibleMoves = (activeColour == 'w') ? possibleMoves &= ~whitePieceBitboard : possibleMoves &= ~blackPieceBitboard;
+
+    // Pawns can only move diagonally if there is an opponent player
+}
+
+
 void Game::MovePiece(bool isOpponentPiece) {
     
     uint64_t *ownBitboard = nullptr;
     uint64_t *opponentBitboard = nullptr;
 
-    // Find out which type of piece is moving
-    if (activeColour == 'w') {
-        // Get the correct piece type bitboard
-        for (int i = 0; i < 6; i++) {
-            if ((*pieceVector[i] & (1ULL << firstClickIdx)) != 0ULL) {
-                ownBitboard = pieceVector[i];
-                break;
-            }
-        }
-    }
-
-    else {
-        // Get the correct piece type bitboard
-        for (int i = 6; i < 12; i++) {
-            if ((*pieceVector[i] & (1ULL << firstClickIdx)) != 0ULL) {
-                ownBitboard = pieceVector[i];
-                break;
-            }
-        }
-    }
+    ownBitboard = pieceVector[srcPieceVectorIdx];
+    if (isOpponentPiece && destPieceVectorIdx != -1)
+        opponentBitboard = pieceVector[destPieceVectorIdx];
 
     // Toggle bits on own piece bitboards
     *ownBitboard &= ~(1ULL << firstClickIdx);
     *ownBitboard |= (1ULL << secondClickIdx);
-
-    if (isOpponentPiece) {
-        if (activeColour == 'w') {
-            // Get the correct piece type bitboard
-            for (int i = 6; i < 12; i++) {
-                if ((*pieceVector[i] & (1ULL << secondClickIdx)) != 0ULL) {
-                    opponentBitboard = pieceVector[i];
-                }
-            }
-        }
-
-        else {
-            // Get the correct piece type bitboard
-            for (int i = 0; i < 6; i++) {
-                if ((*pieceVector[i] & (1ULL << secondClickIdx)) != 0ULL) {
-                    opponentBitboard = pieceVector[i];
-                }
-            }
-        }
-    }
     
     // Update bitboard (if not nullptr) to reflect taking a piece
     if (opponentBitboard)
         *opponentBitboard ^= (1ULL << secondClickIdx);
-    
 
     // Update game variables
     UpdateVariablesAfterMove();
@@ -416,6 +441,6 @@ void Game::GameLoop() {
             }
         }
         
-        gui.RenderScreen(currentFen, clickCount, firstClickIdx);
+        gui.RenderScreen(currentFen, clickCount, firstClickIdx, possibleMoves);
     }
 }
