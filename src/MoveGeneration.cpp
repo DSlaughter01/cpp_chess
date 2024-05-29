@@ -5,24 +5,42 @@ MoveGeneration::MoveGeneration() {
     GenerateWhitePawnMoves();
     GenerateBlackPawnMoves();
     GenerateKnightMoves();
+    GenerateBishopMoves();
+    GenerateRookMoves();
+    GenerateQueenMoves();
     GenerateKingMoves();
 }
 
 
-uint64_t MoveGeneration::CheckForPawnTake(int firstClickIdx, uint64_t generatedMoves, char colour, uint64_t opponentBitboard) {
+uint64_t MoveGeneration::FilterPawnMoves(int firstClickIdx, uint64_t generatedMoves, char colour, uint64_t opponentBitboard) {
 
-    // Check if there is a piece on each diagonal    
     if (colour == 'w') {
         if ((opponentBitboard & (1ULL << (firstClickIdx + UP_LEFT))) == 0) 
             generatedMoves &= ~(1ULL << (firstClickIdx + UP_LEFT));        
         if ((opponentBitboard & (1ULL << (firstClickIdx + UP_RIGHT ))) == 0) 
-            generatedMoves &= ~(1ULL << (firstClickIdx + UP_RIGHT));        
+            generatedMoves &= ~(1ULL << (firstClickIdx + UP_RIGHT)); 
+
+        // Block the pawn if there is a piece in front of it 
+        if ((opponentBitboard & (1ULL << (firstClickIdx + UP)))) {
+            generatedMoves &= ~(1ULL << (firstClickIdx + 2 * UP));
+            generatedMoves &= ~(1ULL << (firstClickIdx + UP));
+        }
+        if ((opponentBitboard & (1ULL << (firstClickIdx + 2 * UP))))
+            generatedMoves &= ~(1ULL << (firstClickIdx + UP));
     }
+
     else {
         if ((opponentBitboard & (1ULL << (firstClickIdx + DOWN_RIGHT))) == 0) 
             generatedMoves &= ~(1ULL << (firstClickIdx + DOWN_RIGHT));        
         if ((opponentBitboard & (1ULL << (firstClickIdx + DOWN_LEFT))) == 0) 
             generatedMoves &= ~(1ULL << (firstClickIdx + DOWN_LEFT));        
+        // Block the pawn if there is a piece in front of it 
+        if ((opponentBitboard & (1ULL << (firstClickIdx + DOWN)))) {
+            generatedMoves &= ~(1ULL << (firstClickIdx + 2 * DOWN));
+            generatedMoves &= ~(1ULL << (firstClickIdx + DOWN));
+        }
+        if ((opponentBitboard & (1ULL << (firstClickIdx + 2 * DOWN))))
+            generatedMoves &= ~(1ULL << (firstClickIdx + DOWN));
     }
 
     // Use UP_LEFT, DOWN_LEFT, UP_RIGHT, UP_LEFT as appropriate
@@ -256,3 +274,126 @@ void MoveGeneration::GenerateKingMoves() {
     }
 }
 
+void MoveGeneration::GenerateBishopMoves() {
+
+    std::vector<int> bishopMoves = {UP_LEFT, UP_RIGHT, DOWN_LEFT, DOWN_RIGHT};
+
+    for (int squareIdx = 0; squareIdx < 64; squareIdx++) {
+
+        uint64_t currentBitboard = 0ULL;
+        uint64_t moveBitboard = 0ULL;
+        
+        SetBit(currentBitboard, squareIdx);
+
+        for (auto &move : bishopMoves) {
+
+            // See where the move would land
+            int currentSquare =  squareIdx;
+            int nextSquare = currentSquare + move;
+
+            bool leftMove = (move == UP_LEFT || move == DOWN_LEFT);
+            bool rightMove = (move == UP_RIGHT || move == DOWN_RIGHT);
+
+            // See if the current square is on the edge
+            bool isAFile = (0ULL | (1ULL << currentSquare)) & AFile;
+            bool isHFile = (0ULL | (1ULL << currentSquare)) & HFile;
+
+            while (nextSquare > -1 && nextSquare < 64) {
+
+                if ((leftMove && isAFile) || (rightMove && isHFile))
+                    break;
+
+                SetBit(moveBitboard, nextSquare);
+                currentSquare += move;
+                nextSquare += move;
+
+                isAFile = (0ULL | (1ULL << (currentSquare))) & AFile;
+                isHFile = (0ULL | (1ULL << (currentSquare))) & HFile;
+            }
+        }
+
+        bishopLookupTable[squareIdx] = moveBitboard;
+    }
+}
+
+
+void MoveGeneration::GenerateRookMoves() {
+
+    std::vector<int> rookMoves = {UP, DOWN, LEFT, RIGHT};
+
+    for (int squareIdx = 0; squareIdx < 64; squareIdx++) {
+
+        uint64_t currentBitboard = 0ULL;
+        uint64_t moveBitboard = 0ULL;
+        
+        SetBit(currentBitboard, squareIdx);
+
+        for (auto &move : rookMoves) {
+
+            // See where the move would land
+            int currentSquare =  squareIdx;
+            int nextSquare = currentSquare + move;
+
+            // See if the current square is on the edge
+            bool isAFile = (0ULL | (1ULL << currentSquare)) & AFile;
+            bool isHFile = (0ULL | (1ULL << currentSquare)) & HFile;
+
+            while (nextSquare > -1 && nextSquare < 64) {
+
+                if ((move == LEFT && isAFile) || (move == RIGHT && isHFile))
+                    break;
+
+                SetBit(moveBitboard, nextSquare);
+                currentSquare += move;
+                nextSquare += move;
+
+                isAFile = (0ULL | (1ULL << (currentSquare))) & AFile;
+                isHFile = (0ULL | (1ULL << (currentSquare))) & HFile;
+            }
+        }
+
+        rookLookupTable[squareIdx]= moveBitboard;
+    }
+}
+
+void MoveGeneration::GenerateQueenMoves() {
+
+    std::vector<int> queenMoves = {UP, DOWN, LEFT, RIGHT, UP_LEFT, UP_RIGHT, DOWN_LEFT, DOWN_RIGHT};
+
+    for (int squareIdx = 0; squareIdx < 64; squareIdx++) {
+
+        uint64_t currentBitboard = 0ULL;
+        uint64_t moveBitboard = 0ULL;
+        
+        SetBit(currentBitboard, squareIdx);
+
+        for (auto &move : queenMoves) {
+
+            // See where the move would land
+            int currentSquare =  squareIdx;
+            int nextSquare = currentSquare + move;
+
+            // See if the current square is on the edge
+            bool isAFile = (0ULL | (1ULL << currentSquare)) & AFile;
+            bool isHFile = (0ULL | (1ULL << currentSquare)) & HFile;
+
+            bool leftMove = (move == UP_LEFT || move == LEFT || move == DOWN_LEFT);
+            bool rightMove = (move == UP_RIGHT || move == RIGHT || move == DOWN_RIGHT);
+
+            while (nextSquare > -1 && nextSquare < 64) {
+
+                if ((leftMove && isAFile) || (rightMove == RIGHT && isHFile))
+                    break;
+
+                SetBit(moveBitboard, nextSquare);
+                currentSquare += move;
+                nextSquare += move;
+
+                isAFile = (0ULL | (1ULL << (currentSquare))) & AFile;
+                isHFile = (0ULL | (1ULL << (currentSquare))) & HFile;
+            }
+        }
+
+        queenLookupTable[squareIdx]= moveBitboard;
+    }
+}

@@ -338,11 +338,23 @@ void Game::LookUpPossibleMoves() {
     switch (srcPieceVectorIdx) {
         case 0 :
             possibleMoves = moveGeneration.whitePawnLookupTable[firstClickIdx];
-            possibleMoves = moveGeneration.CheckForPawnTake(firstClickIdx, possibleMoves, activeColour, blackPieceBitboard);
+            possibleMoves = moveGeneration.FilterPawnMoves(firstClickIdx, possibleMoves, activeColour, blackPieceBitboard);
             break;
 
-        case 2: 
+        case 1 : 
+            possibleMoves = moveGeneration.rookLookupTable[firstClickIdx];
+            break;
+
+        case 2 : 
             possibleMoves = moveGeneration.knightLookupTable[firstClickIdx];
+            break;
+
+        case 3 :
+            possibleMoves = moveGeneration.bishopLookupTable[firstClickIdx];
+            break;
+
+        case 4 :
+            possibleMoves = moveGeneration.queenLookupTable[firstClickIdx];
             break;
 
         case 5 :
@@ -351,11 +363,23 @@ void Game::LookUpPossibleMoves() {
 
         case 6 :
             possibleMoves = moveGeneration.blackPawnLookupTable[firstClickIdx];
-            possibleMoves = moveGeneration.CheckForPawnTake(firstClickIdx, possibleMoves, activeColour, whitePieceBitboard);
+            possibleMoves = moveGeneration.FilterPawnMoves(firstClickIdx, possibleMoves, activeColour, whitePieceBitboard);
+            break;
+
+        case 7 : 
+            possibleMoves = moveGeneration.rookLookupTable[firstClickIdx];
             break;
 
         case 8 : 
             possibleMoves = moveGeneration.knightLookupTable[firstClickIdx];
+            break;
+
+        case 9 :
+            possibleMoves = moveGeneration.bishopLookupTable[firstClickIdx];
+            break;
+
+        case 10 :
+            possibleMoves = moveGeneration.queenLookupTable[firstClickIdx];
             break;
 
         case 11 :
