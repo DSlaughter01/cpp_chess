@@ -50,7 +50,7 @@ uint64_t MoveGeneration::FilterPawnMoves(int firstClickIdx, uint64_t generatedMo
 
 inline bool MoveGeneration::CheckIsOccupied(int targetSquareIdx, uint64_t allPieceBitboard) {
 
-    if ((allPieceBitboard & (1ULL << (targetSquareIdx))) == 0ULL) 
+    if ((allPieceBitboard & (1ULL << (targetSquareIdx))) == EMPTY_BITBOARD) 
         return false;
     else 
         return true;
@@ -59,7 +59,7 @@ inline bool MoveGeneration::CheckIsOccupied(int targetSquareIdx, uint64_t allPie
 
 inline bool MoveGeneration::CheckIsOccupiedByOwn(int targetSquareIdx, uint64_t ownBitboard)
 {
-        if ((ownBitboard & (1ULL << (targetSquareIdx))) == 0ULL) 
+        if ((ownBitboard & (1ULL << (targetSquareIdx))) == EMPTY_BITBOARD) 
             return false;
         else
             return true;
@@ -68,7 +68,7 @@ inline bool MoveGeneration::CheckIsOccupiedByOwn(int targetSquareIdx, uint64_t o
 
 inline bool MoveGeneration::CheckIsOccupiedByOpponent(int targetSquareIdx, uint64_t opponentBitboard)
 {
-        if ((opponentBitboard & (1ULL << (targetSquareIdx))) == 0ULL) 
+        if ((opponentBitboard & (1ULL << (targetSquareIdx))) == EMPTY_BITBOARD) 
             return false;
         else
             return true;
@@ -79,11 +79,9 @@ inline void MoveGeneration::SetBit(uint64_t &bitBoard, int idx) {
 }
 
 
-bool MoveGeneration::CheckCanMakeMove(int secondClickIdx, uint64_t generatedMoves) {
+bool MoveGeneration::CheckCanMakeMove(int secondClickIdx, uint64_t possibleMoves) {
 
-    uint64_t desiredMove = 1ULL << secondClickIdx;
-
-    if ((generatedMoves & (1ULL << secondClickIdx)) != 0ULL)
+    if ((possibleMoves & (1ULL << secondClickIdx)) != EMPTY_BITBOARD)
         return true;
     else
         return false;
@@ -92,20 +90,20 @@ bool MoveGeneration::CheckCanMakeMove(int secondClickIdx, uint64_t generatedMove
 
 void MoveGeneration::GenerateWhitePawnMoves() {
 
-    // These move up: UP, UP_LEFT, UP_RIGHT, 2 * UP_RIGHT
+    // White pawns move UP, UP_LEFT, UP_RIGHT, 2 * UP_RIGHT
 
     // This range used because rank 8 pawns get promoted, and pawns start on rank 2
     for (int squareIdx = 8; squareIdx < 56; squareIdx++) {
 
-        uint64_t currentBitboard = 0ULL;
-        uint64_t moveBitboard = 0ULL;
+        uint64_t currentBitboard = EMPTY_BITBOARD;
+        uint64_t moveBitboard = EMPTY_BITBOARD;
 
         SetBit(currentBitboard, squareIdx);
 
         bool isAFile = (currentBitboard & AFile);
         bool isHFile = (currentBitboard & HFile);
 
-        // Normal pawns
+        // Normal pawns (not rank 2)
         if (squareIdx < 48) {
             SetBit(moveBitboard, squareIdx + UP);
             if (!isAFile) 
@@ -131,19 +129,20 @@ void MoveGeneration::GenerateWhitePawnMoves() {
 
 void MoveGeneration::GenerateBlackPawnMoves() {
 
-    // These move down: 2 * DOWN, DOWN, DOWN_LEFT, DOWN_RIGHT
+    // Black pawns move: 2 * DOWN, DOWN, DOWN_LEFT, DOWN_RIGHT
 
     // This range used because bottom rank can't move, and pawns start on rank 7
     for (int squareIdx = 8; squareIdx < 56; squareIdx++) {
         
-        uint64_t currentBitboard = 0ULL;
-        uint64_t moveBitboard = 0ULL;
+        uint64_t currentBitboard = EMPTY_BITBOARD;
+        uint64_t moveBitboard = EMPTY_BITBOARD;
 
         SetBit(currentBitboard, squareIdx);
 
         bool isAFile = (currentBitboard & AFile);
         bool isHFile = (currentBitboard & HFile);
 
+        // Normal pawns (not rank 7)
         if (squareIdx > 15) {
             SetBit(moveBitboard, squareIdx + DOWN);
             if (!isAFile) 
@@ -151,6 +150,8 @@ void MoveGeneration::GenerateBlackPawnMoves() {
             if (!isHFile)
                 SetBit(moveBitboard, squareIdx + DOWN_RIGHT);  
         }
+
+        // Rank 7 pawns
         else {
             SetBit(moveBitboard, squareIdx + DOWN);
             SetBit(moveBitboard, squareIdx + 2 * DOWN);
@@ -176,13 +177,13 @@ void MoveGeneration::GenerateKnightMoves() {
 
     for (int squareIdx = 0; squareIdx < 64; squareIdx++) {
 
-        uint64_t currentBitboard = 0ULL;
-        uint64_t moveBitboard = 0ULL; 
+        uint64_t currentBitboard = EMPTY_BITBOARD;
+        uint64_t moveBitboard = EMPTY_BITBOARD; 
 
         SetBit(currentBitboard, squareIdx);
 
         // Knights on the middle squares can use any move
-        if ((currentBitboard & (OuterEdge | InnerEdge)) == 0ULL) {
+        if ((currentBitboard & (OuterEdge | InnerEdge)) == EMPTY_BITBOARD) {
             for (auto &move : knightMoves) {
                 SetBit(moveBitboard, squareIdx + move);
             }
@@ -196,28 +197,28 @@ void MoveGeneration::GenerateKnightMoves() {
                 if (move + squareIdx < 64 && move + squareIdx > -1) {
 
                     // Consider the posibility for specific moves 
-                    if (move == -17 && (currentBitboard & (AFile | Rank78)) == 0ULL) 
+                    if (move == -17 && (currentBitboard & (AFile | Rank78)) == EMPTY_BITBOARD) 
                         SetBit(moveBitboard, squareIdx + move);
                     
-                    else if (move == -15 && (currentBitboard & (HFile | Rank78)) == 0ULL) 
+                    else if (move == -15 && (currentBitboard & (HFile | Rank78)) == EMPTY_BITBOARD) 
                         SetBit(moveBitboard, squareIdx + move);
 
-                    else if (move == -10 && (currentBitboard & (ABFile | Rank8)) == 0ULL) 
+                    else if (move == -10 && (currentBitboard & (ABFile | Rank8)) == EMPTY_BITBOARD) 
                         SetBit(moveBitboard, squareIdx + move);
     
-                    else if (move == -6 && (currentBitboard & (GHFile | Rank8)) == 0ULL) 
+                    else if (move == -6 && (currentBitboard & (GHFile | Rank8)) == EMPTY_BITBOARD) 
                         SetBit(moveBitboard, squareIdx + move);
 
-                    else if (move == 6 && (currentBitboard & (ABFile | Rank1)) == 0ULL) 
+                    else if (move == 6 && (currentBitboard & (ABFile | Rank1)) == EMPTY_BITBOARD) 
                         SetBit(moveBitboard, squareIdx + move);
 
-                    else if (move == 10 && (currentBitboard & (GHFile | Rank1)) == 0ULL)
+                    else if (move == 10 && (currentBitboard & (GHFile | Rank1)) == EMPTY_BITBOARD)
                         SetBit(moveBitboard, squareIdx + move);
 
-                    else if (move == 15 && (currentBitboard & (AFile | Rank12)) == 0ULL) 
+                    else if (move == 15 && (currentBitboard & (AFile | Rank12)) == EMPTY_BITBOARD) 
                         SetBit(moveBitboard, squareIdx + move);
 
-                    else if (move == 17 && (currentBitboard & (HFile | Rank12)) == 0ULL)
+                    else if (move == 17 && (currentBitboard & (HFile | Rank12)) == EMPTY_BITBOARD)
                         SetBit(moveBitboard, squareIdx + move);
                 }
             }
@@ -234,12 +235,13 @@ void MoveGeneration::GenerateKingMoves() {
 
     for (int squareIdx  = 0; squareIdx < 64; squareIdx++) {
         
-        uint64_t currentBitboard = 0ULL;
-        uint64_t moveBitboard = 0ULL; 
+        uint64_t currentBitboard = EMPTY_BITBOARD;
+        uint64_t moveBitboard = EMPTY_BITBOARD; 
 
         SetBit(currentBitboard, squareIdx);
         
-        if ((currentBitboard & OuterEdge) == 0ULL) {
+        // Kings not on the outer edge of the board can move anywhere
+        if ((currentBitboard & OuterEdge) == EMPTY_BITBOARD) {
             for (auto &move : kingMoves)
                 SetBit(moveBitboard, squareIdx + move);  
         }
@@ -255,14 +257,14 @@ void MoveGeneration::GenerateKingMoves() {
                     
                     // Check for pieces wrapping around the board left
                     else if ((move == LEFT || move == DOWN_LEFT || move == UP_LEFT) && 
-                        (currentBitboard & AFile) == 0ULL)
+                        (currentBitboard & AFile) == EMPTY_BITBOARD)
                     {
                         SetBit(moveBitboard, squareIdx + move);
                     }
 
                     // And right
                     else if ((move == RIGHT || move == DOWN_RIGHT || move == DOWN_LEFT) && 
-                             (currentBitboard & HFile) == 0ULL)
+                             (currentBitboard & HFile) == EMPTY_BITBOARD)
                     {
                         SetBit(moveBitboard, squareIdx + move);
                     }
@@ -280,8 +282,8 @@ void MoveGeneration::GenerateBishopMoves() {
 
     for (int squareIdx = 0; squareIdx < 64; squareIdx++) {
 
-        uint64_t currentBitboard = 0ULL;
-        uint64_t moveBitboard = 0ULL;
+        uint64_t currentBitboard = EMPTY_BITBOARD;
+        uint64_t moveBitboard = EMPTY_BITBOARD;
         
         SetBit(currentBitboard, squareIdx);
 
@@ -294,9 +296,9 @@ void MoveGeneration::GenerateBishopMoves() {
             bool leftMove = (move == UP_LEFT || move == DOWN_LEFT);
             bool rightMove = (move == UP_RIGHT || move == DOWN_RIGHT);
 
-            // See if the current square is on the edge
-            bool isAFile = (0ULL | (1ULL << currentSquare)) & AFile;
-            bool isHFile = (0ULL | (1ULL << currentSquare)) & HFile;
+            // See if the current square is on the edge of the board
+            bool isAFile = (EMPTY_BITBOARD | (1ULL << currentSquare)) & AFile;
+            bool isHFile = (EMPTY_BITBOARD | (1ULL << currentSquare)) & HFile;
 
             while (nextSquare > -1 && nextSquare < 64) {
 
@@ -307,8 +309,8 @@ void MoveGeneration::GenerateBishopMoves() {
                 currentSquare += move;
                 nextSquare += move;
 
-                isAFile = (0ULL | (1ULL << (currentSquare))) & AFile;
-                isHFile = (0ULL | (1ULL << (currentSquare))) & HFile;
+                isAFile = (EMPTY_BITBOARD | (1ULL << (currentSquare))) & AFile;
+                isHFile = (EMPTY_BITBOARD | (1ULL << (currentSquare))) & HFile;
             }
         }
 
@@ -323,8 +325,8 @@ void MoveGeneration::GenerateRookMoves() {
 
     for (int squareIdx = 0; squareIdx < 64; squareIdx++) {
 
-        uint64_t currentBitboard = 0ULL;
-        uint64_t moveBitboard = 0ULL;
+        uint64_t currentBitboard = EMPTY_BITBOARD;
+        uint64_t moveBitboard = EMPTY_BITBOARD;
         
         SetBit(currentBitboard, squareIdx);
 
@@ -335,8 +337,8 @@ void MoveGeneration::GenerateRookMoves() {
             int nextSquare = currentSquare + move;
 
             // See if the current square is on the edge
-            bool isAFile = (0ULL | (1ULL << currentSquare)) & AFile;
-            bool isHFile = (0ULL | (1ULL << currentSquare)) & HFile;
+            bool isAFile = (EMPTY_BITBOARD | (1ULL << currentSquare)) & AFile;
+            bool isHFile = (EMPTY_BITBOARD | (1ULL << currentSquare)) & HFile;
 
             while (nextSquare > -1 && nextSquare < 64) {
 
@@ -347,8 +349,8 @@ void MoveGeneration::GenerateRookMoves() {
                 currentSquare += move;
                 nextSquare += move;
 
-                isAFile = (0ULL | (1ULL << (currentSquare))) & AFile;
-                isHFile = (0ULL | (1ULL << (currentSquare))) & HFile;
+                isAFile = (EMPTY_BITBOARD | (1ULL << (currentSquare))) & AFile;
+                isHFile = (EMPTY_BITBOARD | (1ULL << (currentSquare))) & HFile;
             }
         }
 
@@ -362,8 +364,8 @@ void MoveGeneration::GenerateQueenMoves() {
 
     for (int squareIdx = 0; squareIdx < 64; squareIdx++) {
 
-        uint64_t currentBitboard = 0ULL;
-        uint64_t moveBitboard = 0ULL;
+        uint64_t currentBitboard = EMPTY_BITBOARD;
+        uint64_t moveBitboard = EMPTY_BITBOARD;
         
         SetBit(currentBitboard, squareIdx);
 
@@ -374,23 +376,24 @@ void MoveGeneration::GenerateQueenMoves() {
             int nextSquare = currentSquare + move;
 
             // See if the current square is on the edge
-            bool isAFile = (0ULL | (1ULL << currentSquare)) & AFile;
-            bool isHFile = (0ULL | (1ULL << currentSquare)) & HFile;
+            bool isAFile = (EMPTY_BITBOARD | (1ULL << currentSquare)) & AFile;
+            bool isHFile = (EMPTY_BITBOARD | (1ULL << currentSquare)) & HFile;
 
             bool leftMove = (move == UP_LEFT || move == LEFT || move == DOWN_LEFT);
             bool rightMove = (move == UP_RIGHT || move == RIGHT || move == DOWN_RIGHT);
 
+            // Prevent moving off the board vertically
             while (nextSquare > -1 && nextSquare < 64) {
 
-                if ((leftMove && isAFile) || (rightMove == RIGHT && isHFile))
+                if ((leftMove && isAFile) || (rightMove && isHFile))
                     break;
 
                 SetBit(moveBitboard, nextSquare);
                 currentSquare += move;
                 nextSquare += move;
 
-                isAFile = (0ULL | (1ULL << (currentSquare))) & AFile;
-                isHFile = (0ULL | (1ULL << (currentSquare))) & HFile;
+                isAFile = (EMPTY_BITBOARD | (1ULL << (currentSquare))) & AFile;
+                isHFile = (EMPTY_BITBOARD | (1ULL << (currentSquare))) & HFile;
             }
         }
 

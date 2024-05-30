@@ -26,7 +26,7 @@ GUI::GUI() :
         return;
     }
 
-    // Create a renderer, and set its draw colour to dark grey
+    // Create a renderer
     renderer = SDL_CreateRenderer(window, -1, 0);
     if (!renderer) {
         std::cerr << "Renderer could not be initialised: " << SDL_GetError() << std::endl;
@@ -40,6 +40,12 @@ GUI::GUI() :
 
 
 GUI::~GUI() {
+
+    for (auto &i : pieceTextures) {
+
+        if (i) 
+            SDL_DestroyTexture(i);
+    }
 
     if (window)
         SDL_DestroyWindow(window);
@@ -61,6 +67,7 @@ std::vector<int> GUI::GetBoardDimensions() {
 
 
 void GUI::InitialiseCharToTextureMap() {
+
     charToTextureMap = {
         {'P', pieceTextures[wP]}, 
         {'R', pieceTextures[wR]}, 
@@ -104,6 +111,7 @@ void GUI::LoadPieceTextures() {
 
     for (int i = 0; i < filenames.size(); i++) {
 
+        // Create a RWOps object
         tempName = "assets/" + filenames[i] + ".svg";
         rw = SDL_RWFromFile(tempName.c_str(), "r");
 
@@ -112,19 +120,24 @@ void GUI::LoadPieceTextures() {
             return;
         }
         
+        // Load the SVG from the RWops object
         pieceSurfaces[i] = IMG_LoadSVG_RW(rw);
+
         if (!pieceSurfaces[i]) {
             std::cerr << "Failed to load SVG: " << IMG_GetError() << std::endl;
             return;
         }
 
         else {
+
+            // Create a texture from the surface to pass to the renderer
             pieceTextures[i] = SDL_CreateTextureFromSurface(renderer, pieceSurfaces[i]);
             if (!pieceTextures[i]) {
                 std::cerr << "Failed to create texture from SVG: " << SDL_GetError() << std::endl;
                 return;
             }
 
+            // Clean up
             SDL_FreeSurface(pieceSurfaces[i]);
         }
     }
@@ -133,11 +146,11 @@ void GUI::LoadPieceTextures() {
 
 void GUI::RenderBoard(int clickCount, int clickIdx, uint64_t possibleMoves) {
 
-    int clicki = INVALID_CLICK_IDX;
-    int clickj = INVALID_CLICK_IDX;
+    int clicki = INVALID_IDX;
+    int clickj = INVALID_IDX;
 
     // Index in 2D boardDest array where the player has clicked on 1st click
-    if (clickCount == 1 && clickIdx != INVALID_CLICK_IDX) {
+    if (clickCount == 1 && clickIdx != INVALID_IDX) {
         clicki = clickIdx % 8;
         clickj = clickIdx / 8;
     }
@@ -147,13 +160,13 @@ void GUI::RenderBoard(int clickCount, int clickIdx, uint64_t possibleMoves) {
 
             // Highlight the square the user has clicked on
             if (i == clicki && j == clickj) {
-                SDL_SetRenderDrawColor(renderer, 0, 0, 200, SDL_ALPHA_OPAQUE);
+                SDL_SetRenderDrawColor(renderer, 0, 102, 0, SDL_ALPHA_OPAQUE);
                 SDL_RenderFillRect(renderer, &boardDest[i][j]);
             }
 
             // Highlight possible moves
             else if ((possibleMoves & (1ULL << (i + j * 8))) != 0) {
-                SDL_SetRenderDrawColor(renderer, 50, 200, 200, SDL_ALPHA_OPAQUE);
+                SDL_SetRenderDrawColor(renderer, 204, 102, 0, SDL_ALPHA_OPAQUE);
                 SDL_RenderFillRect(renderer, &boardDest[i][j]);
             }
             
@@ -180,9 +193,10 @@ void GUI::RenderPieces(std::string &fenString) {
 
     for (auto &i : fenString) {
 
-        if (i == 32)
+        if (i == ' ')
             break;
         
+        // Render the piece denoted by the character
         else if (isalpha(i)) {
             
             x = squareIdx % 8;
@@ -194,6 +208,7 @@ void GUI::RenderPieces(std::string &fenString) {
             squareIdx++;
         }
 
+        // Move on if the character denotes one or multiple empty squares
         else if (isdigit(i)) {
             squareIdx += i - '0';
         }
@@ -202,6 +217,7 @@ void GUI::RenderPieces(std::string &fenString) {
 
 
 void GUI::RenderScreen(std::string &fenString, int clickCount, int clickIdx, uint64_t possibleMoves) {
+
     SDL_RenderClear(renderer);
 
     RenderBoard(clickCount, clickIdx, possibleMoves);

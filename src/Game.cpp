@@ -2,9 +2,9 @@
 
 Game::Game() :
     isRunning(true), isGameOver(false), 
-    clickCount(0), firstClickIdx(INVALID_CLICK_IDX), secondClickIdx(INVALID_CLICK_IDX),
+    clickCount(0), firstClickIdx(INVALID_IDX), secondClickIdx(INVALID_IDX),
     boardX(0), boardY(0), boardW(0), boardH(0), squareDim(0),
-    possibleMoves(0ULL), srcPieceVectorIdx(-1), destPieceVectorIdx(-1),
+    possibleMoves(0ULL), srcPieceVectorIdx(INVALID_IDX), destPieceVectorIdx(INVALID_IDX),
     wP(0ULL), wR(0ULL), wN(0ULL), wB(0ULL), wQ(0ULL), wK(0ULL), 
     bP(0ULL), bR(0ULL),  bN(0ULL), bB(0ULL), bQ(0ULL), bK(0ULL),
     currentFen(initialFen), castlingRights({}), enPassantTarget("-")
@@ -19,6 +19,13 @@ Game::Game() :
     else {
         InitialiseFenConversionMaps();
         InitialiseBitboards();
+
+        std::vector<int> boardDimensions = gui.GetBoardDimensions();
+        boardX = boardDimensions[0];
+        boardY = boardDimensions[1];
+        boardW = boardDimensions[2];
+        boardH = boardDimensions[3];
+        squareDim = boardW / 8;  
     }
 }
 
@@ -28,8 +35,56 @@ Game::~Game() {
 }
 
 
-void Game::SetBit(uint64_t &bitBoard, int idx) {
+inline void Game::SetBit(uint64_t &bitBoard, int idx) {
     bitBoard |= (1ULL << idx);
+}
+
+
+inline bool Game::CheckIsOwnPiece(int clickIdx) {
+    
+    if (activeColour == 'w') {
+        if ((whitePieceBitboard & (1ULL << clickIdx)) != 0) 
+            return true;
+        else
+            return false;
+    }
+
+    else {
+        if ((blackPieceBitboard & (1ULL << clickIdx)) != 0) 
+            return true;
+        else
+            return false;
+    }
+}
+
+
+inline bool Game::CheckIsOpponentPiece(int clickIdx) {
+
+    if (activeColour == 'w') {
+        if ((blackPieceBitboard & (1ULL << clickIdx)) != 0) 
+            return true;
+        else
+            return false;
+    }
+
+    else {
+        if ((whitePieceBitboard & (1ULL << clickIdx)) != 0) 
+            return true;
+        else
+            return false;
+    }
+}
+
+
+inline int Game::FindPieceIdx(int clickIdx) {
+
+    // Get the correct piece type
+    for (int i = 0; i < 12; i++) {
+        if ((*pieceVector[i] & (1ULL << clickIdx)) != 0ULL)
+            return i;     
+    }
+
+    return -1;
 }
 
 
@@ -53,8 +108,10 @@ void Game::InitialiseBitboards() {
     wP = wR = wN = wB = wQ = wK = 0ULL;
     bP = bR = bN = bB = bQ = bK = 0ULL;
 
+    // Populate bitboards and other game variables
     ConvertFenToGameVariables(initialFen);
 
+    // Store references to bitboards
     pieceVector = {&wP, &wR, &wN, &wB, &wQ, &wK, 
                    &bP, &bR, &bN, &bB, &bQ, &bK};
 
@@ -115,7 +172,7 @@ void Game::ConvertFenToGameVariables(std::string fenString) {
 
     // Half-move clock
     std::string hmc = "";
-    while (fenString[stringIdx] != 32) {
+    while (fenString[stringIdx] != ' ') {
         hmc += fenString[stringIdx];
         stringIdx++;
     }
@@ -153,8 +210,10 @@ void Game::ConvertGameVariablesToFen() {
         if ((allPieceBitboard & (1ULL << i)) != 0) {
 
             for (auto pieceType : pieceVector) {
+
                 // See if this is the type of character present
                 if ((*pieceType & (1ULL << i)) != 0) {
+
                     // Add the character corresponding to that pieceType to currentFen
                     if (emptySquares > 0) {
                         currentFen += std::to_string(emptySquares);
@@ -187,54 +246,19 @@ void Game::ConvertGameVariablesToFen() {
 }
 
 
-bool Game::CheckIsOwnPiece(int clickIdx) {
-    
-    if (activeColour == 'w') {
-        if ((whitePieceBitboard & (1ULL << clickIdx)) != 0) 
-            return true;
-        else
-            return false;
-    }
-
-    else {
-        if ((blackPieceBitboard & (1ULL << clickIdx)) != 0) 
-            return true;
-        else
-            return false;
-    }
-}
-
-
-bool Game::CheckIsOpponentPiece(int clickIdx) {
-
-    if (activeColour == 'w') {
-        if ((blackPieceBitboard & (1ULL << clickIdx)) != 0) 
-            return true;
-        else
-            return false;
-    }
-
-    else {
-        if ((whitePieceBitboard & (1ULL << clickIdx)) != 0) 
-            return true;
-        else
-            return false;
-    }
-}
-
-
 void Game::HandleFirstClickEvent() {
 
     int clickIdx = GetClickSquareIdx();
 
-    if (clickIdx == INVALID_CLICK_IDX)
+    if (clickIdx == INVALID_IDX)
         return;
     
-    // Nothing happens if the player's first click is not on their own piece
+    // Player has to click on their own piece for something to happen
     bool isOwnPiece = CheckIsOwnPiece(clickIdx);
 
     if (isOwnPiece) {
-        SetClickSquareIdx(clickIdx);
+
+        SetClickVariables(clickIdx);
         srcPieceVectorIdx = FindPieceIdx(firstClickIdx);
         LookUpPossibleMoves();
     }
@@ -243,19 +267,19 @@ void Game::HandleFirstClickEvent() {
 
 void Game::HandleSecondClickEvent() {
 
+    // Find out where the user clicks
     int clickIdx = GetClickSquareIdx();
 
     // Reset click variables if user clicks off screen
-    if (clickIdx == INVALID_CLICK_IDX) {
+    if (clickIdx == INVALID_IDX) {
         ResetClickVariables();
         return;
     }
 
     // If the user clicks on one of their own pieces again, change the focus
     bool isOwnPiece = CheckIsOwnPiece(clickIdx);
-    bool isOpponentPiece = CheckIsOpponentPiece(clickIdx);
 
-    SetClickSquareIdx(clickIdx, isOwnPiece);
+    SetClickVariables(clickIdx, isOwnPiece);
 
     if (isOwnPiece) {
         srcPieceVectorIdx = FindPieceIdx(firstClickIdx);
@@ -264,22 +288,24 @@ void Game::HandleSecondClickEvent() {
 
     // Check if it is a valid move, and move accordingly
     if (clickCount == 2) {
+
+        // The piece at the square where the player wants to move
         destPieceVectorIdx = FindPieceIdx(secondClickIdx);
+        bool isOpponentPiece = CheckIsOpponentPiece(secondClickIdx);
+
         if (moveGeneration.CheckCanMakeMove(secondClickIdx, possibleMoves)) {
+
             MovePiece(isOpponentPiece);
-            ResetClickVariables();
-            possibleMoves = 0ULL;
+            
+            // Update game variables
+            UpdateVariablesAfterMove();
+            ConvertGameVariablesToFen();
         }
+
         else {
             clickCount = 1;
         }
     }
-}
-
-void Game::ResetClickVariables() {
-
-    clickCount = 0;
-    firstClickIdx = secondClickIdx = INVALID_CLICK_IDX;
 }
 
 
@@ -290,7 +316,7 @@ int Game::GetClickSquareIdx() {
 
     // Check for clicks off the board (invalid clicks)
     if (x < boardX || x > boardX + boardW || y < boardY || y > boardY + boardH)
-        clickIdx = INVALID_CLICK_IDX;
+        clickIdx = INVALID_IDX;
     
     else {
         x = (x - boardX) / squareDim;
@@ -303,15 +329,14 @@ int Game::GetClickSquareIdx() {
 }
 
 
-// changeFocus is whether the player clicks on another of their pieces on the second click
-void Game::SetClickSquareIdx(int clickIdx, bool changeFocus) {
+void Game::SetClickVariables(int clickIdx, bool isOwnPiece) {
 
     if (clickCount == 0) {
         firstClickIdx = clickIdx;
         clickCount++;   
     }
 
-    else if (clickCount == 1 && changeFocus)
+    else if (clickCount == 1 && isOwnPiece)
         firstClickIdx = clickIdx;
 
     else {
@@ -321,15 +346,10 @@ void Game::SetClickSquareIdx(int clickIdx, bool changeFocus) {
 }
 
 
-int Game::FindPieceIdx(int clickIdx) {
+void Game::ResetClickVariables() {
 
-    // Get the correct piece type
-    for (int i = 0; i < 12; i++) {
-        if ((*pieceVector[i] & (1ULL << clickIdx)) != 0ULL)
-            return i;     
-    }
-
-    return -1;
+    clickCount = 0;
+    firstClickIdx = secondClickIdx = INVALID_IDX;
 }
 
 
@@ -337,87 +357,84 @@ void Game::LookUpPossibleMoves() {
 
     switch (srcPieceVectorIdx) {
         case 0 :
-            possibleMoves = moveGeneration.whitePawnLookupTable[firstClickIdx];
+            possibleMoves = moveGeneration.GetWhitePawnsMoves(firstClickIdx);
             possibleMoves = moveGeneration.FilterPawnMoves(firstClickIdx, possibleMoves, activeColour, blackPieceBitboard);
             break;
 
         case 1 : 
-            possibleMoves = moveGeneration.rookLookupTable[firstClickIdx];
+            possibleMoves = moveGeneration.GetRookMoves(firstClickIdx);
             break;
 
         case 2 : 
-            possibleMoves = moveGeneration.knightLookupTable[firstClickIdx];
+            possibleMoves = moveGeneration.GetKnightMoves(firstClickIdx);
             break;
 
         case 3 :
-            possibleMoves = moveGeneration.bishopLookupTable[firstClickIdx];
+            possibleMoves = moveGeneration.GetBishopMoves(firstClickIdx);
             break;
 
         case 4 :
-            possibleMoves = moveGeneration.queenLookupTable[firstClickIdx];
+            possibleMoves = moveGeneration.GetQueenMoves(firstClickIdx);
             break;
 
         case 5 :
-            possibleMoves = moveGeneration.kingLookupTable[firstClickIdx];
+            possibleMoves = moveGeneration.GetKingMoves(firstClickIdx);
             break;
 
         case 6 :
-            possibleMoves = moveGeneration.blackPawnLookupTable[firstClickIdx];
+            possibleMoves = moveGeneration.GetBlackPawnsMoves(firstClickIdx);
             possibleMoves = moveGeneration.FilterPawnMoves(firstClickIdx, possibleMoves, activeColour, whitePieceBitboard);
             break;
 
         case 7 : 
-            possibleMoves = moveGeneration.rookLookupTable[firstClickIdx];
+            possibleMoves = moveGeneration.GetRookMoves(firstClickIdx);
             break;
 
         case 8 : 
-            possibleMoves = moveGeneration.knightLookupTable[firstClickIdx];
+            possibleMoves = moveGeneration.GetKnightMoves(firstClickIdx);
             break;
 
         case 9 :
-            possibleMoves = moveGeneration.bishopLookupTable[firstClickIdx];
+            possibleMoves = moveGeneration.GetBishopMoves(firstClickIdx);
             break;
 
         case 10 :
-            possibleMoves = moveGeneration.queenLookupTable[firstClickIdx];
+            possibleMoves = moveGeneration.GetQueenMoves(firstClickIdx);
             break;
 
         case 11 :
-            possibleMoves = moveGeneration.kingLookupTable[firstClickIdx];
+            possibleMoves = moveGeneration.GetKingMoves(firstClickIdx);
             break;
     }
 
     // Remove squares which are occupied by a player's own pieces
     possibleMoves = (activeColour == 'w') ? possibleMoves &= ~whitePieceBitboard : possibleMoves &= ~blackPieceBitboard;
-
-    // Pawns can only move diagonally if there is an opponent player
 }
 
 
 void Game::MovePiece(bool isOpponentPiece) {
     
-    uint64_t *ownBitboard = nullptr;
+    uint64_t *ownBitboard = pieceVector[srcPieceVectorIdx];
     uint64_t *opponentBitboard = nullptr;
-
-    ownBitboard = pieceVector[srcPieceVectorIdx];
-    if (isOpponentPiece && destPieceVectorIdx != -1)
-        opponentBitboard = pieceVector[destPieceVectorIdx];
 
     // Toggle bits on own piece bitboards
     *ownBitboard &= ~(1ULL << firstClickIdx);
     *ownBitboard |= (1ULL << secondClickIdx);
+
+    // Opponent bitboard referenced if user tries to take piece
+    if (isOpponentPiece && destPieceVectorIdx != INVALID_IDX)
+        opponentBitboard = pieceVector[destPieceVectorIdx];
     
     // Update bitboard (if not nullptr) to reflect taking a piece
     if (opponentBitboard)
         *opponentBitboard ^= (1ULL << secondClickIdx);
-
-    // Update game variables
-    UpdateVariablesAfterMove();
-    ConvertGameVariablesToFen();
 }
 
 
 void Game::UpdateVariablesAfterMove() {
+
+    ResetClickVariables();
+    possibleMoves = 0ULL;
 
     // Update composite bitboards
     whitePieceBitboard = wP | wR | wN | wB | wQ | wK;
@@ -436,13 +453,6 @@ void Game::UpdateVariablesAfterMove() {
 
 void Game::GameLoop() {
 
-    std::vector<int> boardDimensions = gui.GetBoardDimensions();
-    boardX = boardDimensions[0];
-    boardY = boardDimensions[1];
-    boardW = boardDimensions[2];
-    boardH = boardDimensions[3];
-    squareDim = boardW / 8;
-    
     SDL_Event event;
 
     while (isRunning) {
@@ -451,13 +461,18 @@ void Game::GameLoop() {
 
             switch (event.type) {
 
+                // User quits
                 case (SDL_QUIT) :
                     isRunning = false;
                     break;
 
+                // User clicks
                 case (SDL_MOUSEBUTTONUP) :
-                    if (clickCount == 0)
+
+                    if (clickCount == 0) {
                         HandleFirstClickEvent();
+                    }
+                    
                     else if (clickCount == 1) {
                         HandleSecondClickEvent();
                     }
