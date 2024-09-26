@@ -25,6 +25,7 @@ Game::Game() :
         boardY = boardDimensions[1];
         boardW = boardDimensions[2];
         boardH = boardDimensions[3];
+
         squareDim = boardW / 8;  
     }
 }
@@ -428,6 +429,20 @@ void Game::MovePiece(bool isOpponentPiece) {
     // Update bitboard (if not nullptr) to reflect taking a piece
     if (opponentBitboard)
         *opponentBitboard ^= (1ULL << secondClickIdx);
+
+    // Update halfMove - if a pawn moves or a piece is taken, halfMove = 0
+    if (srcPieceVectorIdx == 0 || srcPieceVectorIdx == 6 || opponentBitboard) 
+        halfMoveClock = 0;
+    else 
+        halfMoveClock++;
+
+    // If halfMove == 50, the game is a draw
+    if (halfMoveClock == 50)
+        isRunning = false;
+
+    // Incrememnt fullMove by 1 every time black moves
+    if (activeColour == 'b')
+        fullMove++;    
 }
 
 
@@ -446,8 +461,8 @@ void Game::UpdateVariablesAfterMove() {
 
     // TODO
     // Check if castling still possible
-    // Update halfMove
-    // Update fullMove    
+        // If either rook moves, then one of the options is removed
+        // If the king moves, both options are removed
 }
 
 

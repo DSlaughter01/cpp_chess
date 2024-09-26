@@ -69,9 +69,9 @@ class MoveGeneration {
                             DOWN_LEFT = 7, 
                             DOWN_RIGHT = 9};
         
-        // These are used to check whether the piece can move without going off the board
         const uint64_t EMPTY_BITBOARD = 0ULL;
 
+        // These are used to check whether the piece can move without going off the board
         const uint64_t AFile = 0b0000000100000001000000010000000100000001000000010000000100000001ULL;
         const uint64_t BFile = 0b0000001000000010000000100000001000000010000000100000001000000010ULL;
         const uint64_t GFile = 0b0100000001000000010000000100000001000000010000000100000001000000ULL;

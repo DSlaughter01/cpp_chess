@@ -51,5 +51,6 @@
         "array": "cpp",
         "algorithm": "cpp",
         "set": "cpp"
-    }
+    },
+    "makefile.configureOnOpen": false
 }
