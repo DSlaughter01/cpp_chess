@@ -33,7 +33,8 @@ uint64_t MoveGeneration::FilterPawnMoves(int firstClickIdx, uint64_t generatedMo
         if ((opponentBitboard & (1ULL << (firstClickIdx + DOWN_RIGHT))) == 0) 
             generatedMoves &= ~(1ULL << (firstClickIdx + DOWN_RIGHT));        
         if ((opponentBitboard & (1ULL << (firstClickIdx + DOWN_LEFT))) == 0) 
-            generatedMoves &= ~(1ULL << (firstClickIdx + DOWN_LEFT));        
+            generatedMoves &= ~(1ULL << (firstClickIdx + DOWN_LEFT)); 
+                   
         // Block the pawn if there is a piece in front of it 
         if ((opponentBitboard & (1ULL << (firstClickIdx + DOWN)))) {
             generatedMoves &= ~(1ULL << (firstClickIdx + 2 * DOWN));
@@ -43,7 +44,6 @@ uint64_t MoveGeneration::FilterPawnMoves(int firstClickIdx, uint64_t generatedMo
             generatedMoves &= ~(1ULL << (firstClickIdx + DOWN));
     }
 
-    // Use UP_LEFT, DOWN_LEFT, UP_RIGHT, UP_LEFT as appropriate
     return generatedMoves;
 }
 
@@ -173,7 +173,7 @@ void MoveGeneration::GenerateKnightMoves() {
     uint64_t Rank12 = Rank1 | Rank2;
     uint64_t Rank78 = Rank7 | Rank8;
 
-    std::vector<int> knightMoves = {-17, -15, -10, -6, 6, 10, 15, 17};
+    std::array<int, 8> knightMoves = {-17, -15, -10, -6, 6, 10, 15, 17};
 
     for (int squareIdx = 0; squareIdx < 64; squareIdx++) {
 
@@ -231,7 +231,7 @@ void MoveGeneration::GenerateKnightMoves() {
 
 void MoveGeneration::GenerateKingMoves() {
 
-    std::vector<int> kingMoves = {UP, DOWN, LEFT, RIGHT, UP_LEFT, UP_RIGHT, DOWN_LEFT, DOWN_RIGHT};
+    std::array<int, 8> kingMoves = {UP, DOWN, LEFT, RIGHT, UP_LEFT, UP_RIGHT, DOWN_LEFT, DOWN_RIGHT};
 
     for (int squareIdx  = 0; squareIdx < 64; squareIdx++) {
         
@@ -278,7 +278,7 @@ void MoveGeneration::GenerateKingMoves() {
 
 void MoveGeneration::GenerateBishopMoves() {
 
-    std::vector<int> bishopMoves = {UP_LEFT, UP_RIGHT, DOWN_LEFT, DOWN_RIGHT};
+    std::array<int, 4> bishopMoves = {UP_LEFT, UP_RIGHT, DOWN_LEFT, DOWN_RIGHT};
 
     for (int squareIdx = 0; squareIdx < 64; squareIdx++) {
 
@@ -321,7 +321,7 @@ void MoveGeneration::GenerateBishopMoves() {
 
 void MoveGeneration::GenerateRookMoves() {
 
-    std::vector<int> rookMoves = {UP, DOWN, LEFT, RIGHT};
+    std::array<int, 4> rookMoves = {UP, DOWN, LEFT, RIGHT};
 
     for (int squareIdx = 0; squareIdx < 64; squareIdx++) {
 
@@ -333,7 +333,7 @@ void MoveGeneration::GenerateRookMoves() {
         for (auto &move : rookMoves) {
 
             // See where the move would land
-            int currentSquare =  squareIdx;
+            int currentSquare = squareIdx;
             int nextSquare = currentSquare + move;
 
             // See if the current square is on the edge
@@ -354,13 +354,13 @@ void MoveGeneration::GenerateRookMoves() {
             }
         }
 
-        rookLookupTable[squareIdx]= moveBitboard;
+        rookLookupTable[squareIdx] = moveBitboard;
     }
 }
 
 void MoveGeneration::GenerateQueenMoves() {
 
-    std::vector<int> queenMoves = {UP, DOWN, LEFT, RIGHT, UP_LEFT, UP_RIGHT, DOWN_LEFT, DOWN_RIGHT};
+    std::array<int, 8> queenMoves = {UP, DOWN, LEFT, RIGHT, UP_LEFT, UP_RIGHT, DOWN_LEFT, DOWN_RIGHT};
 
     for (int squareIdx = 0; squareIdx < 64; squareIdx++) {
 
@@ -389,6 +389,7 @@ void MoveGeneration::GenerateQueenMoves() {
                     break;
 
                 SetBit(moveBitboard, nextSquare);
+
                 currentSquare += move;
                 nextSquare += move;
 
@@ -400,3 +401,15 @@ void MoveGeneration::GenerateQueenMoves() {
         queenLookupTable[squareIdx]= moveBitboard;
     }
 }
+
+
+// Filtering sliding piece moves
+
+    // Need to take into account both of the bitmasks - the occupancy
+    // Reduce the occupancy to the relevant rank and file
+    // "Move" the piece one square in each direction possible
+    // If the square is occupied by an opponent piece
+        // Allow a move to there
+        // Do not allow any moves past there - remove this from the possible directions
+    // If the square is occupied by the player's own piece
+        // Do not allow a move there 

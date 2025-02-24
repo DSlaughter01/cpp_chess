@@ -3,10 +3,7 @@
 Game::Game() :
     isRunning(true), isGameOver(false), 
     clickCount(0), firstClickIdx(INVALID_IDX), secondClickIdx(INVALID_IDX),
-    boardX(0), boardY(0), boardW(0), boardH(0), squareDim(0),
-    possibleMoves(0ULL), srcPieceVectorIdx(INVALID_IDX), destPieceVectorIdx(INVALID_IDX),
-    wP(0ULL), wR(0ULL), wN(0ULL), wB(0ULL), wQ(0ULL), wK(0ULL), 
-    bP(0ULL), bR(0ULL),  bN(0ULL), bB(0ULL), bQ(0ULL), bK(0ULL),
+    possibleMoves(0ULL), srcPieceArrayIdx(INVALID_IDX), destPieceArrayIdx(INVALID_IDX),
     currentFen(initialFen), castlingRights({}), enPassantTarget("-")
     {
 
@@ -14,20 +11,19 @@ Game::Game() :
     if (SDL_Init(SDL_INIT_EVERYTHING) < 0) {
         std::cerr << "SDL not initialised properly: " << SDL_GetError() << std::endl;
         isRunning = false;
+        return;
     }
 
-    else {
-        InitialiseFenConversionMaps();
-        InitialiseBitboards();
+    InitialiseFenConversionMaps();
+    InitialiseBitboards();
 
-        std::vector<int> boardDimensions = gui.GetBoardDimensions();
-        boardX = boardDimensions[0];
-        boardY = boardDimensions[1];
-        boardW = boardDimensions[2];
-        boardH = boardDimensions[3];
+    std::array<int, 4> boardDimensions = gui.GetBoardDimensions();
+    boardX = boardDimensions[0];
+    boardY = boardDimensions[1];
+    boardW = boardDimensions[2];
+    boardH = boardDimensions[3];
 
-        squareDim = boardW / 8;  
-    }
+    squareDim = boardW / 8;  
 }
 
 
@@ -81,7 +77,7 @@ inline int Game::FindPieceIdx(int clickIdx) {
 
     // Get the correct piece type
     for (int i = 0; i < 12; i++) {
-        if ((*pieceVector[i] & (1ULL << clickIdx)) != 0ULL)
+        if ((*pieceArray[i] & (1ULL << clickIdx)) != 0ULL)
             return i;     
     }
 
@@ -105,7 +101,7 @@ void Game::InitialiseFenConversionMaps() {
 
 void Game::InitialiseBitboards() {
 
-    // Reset bitboards
+    // Set bitboard to empty
     wP = wR = wN = wB = wQ = wK = 0ULL;
     bP = bR = bN = bB = bQ = bK = 0ULL;
 
@@ -113,7 +109,7 @@ void Game::InitialiseBitboards() {
     ConvertFenToGameVariables(initialFen);
 
     // Store references to bitboards
-    pieceVector = {&wP, &wR, &wN, &wB, &wQ, &wK, 
+    pieceArray = {&wP, &wR, &wN, &wB, &wQ, &wK, 
                    &bP, &bR, &bN, &bB, &bQ, &bK};
 
     // Update composite bitboards
@@ -134,7 +130,7 @@ void Game::ConvertFenToGameVariables(std::string fenString) {
     // Update bitboards until hitting a space character
     while (fenString[stringIdx] != ' ') {
 
-        // If the character is a number, advance bitIdx by the character
+        // If the character is a number, advance bitIdx by the number
         if (isdigit(fenString[stringIdx]))
             bitIdx += (fenString[stringIdx] - '0');
         
@@ -210,7 +206,7 @@ void Game::ConvertGameVariablesToFen() {
         // If a piece is present on this square
         if ((allPieceBitboard & (1ULL << i)) != 0) {
 
-            for (auto pieceType : pieceVector) {
+            for (auto pieceType : pieceArray) {
 
                 // See if this is the type of character present
                 if ((*pieceType & (1ULL << i)) != 0) {
@@ -260,7 +256,7 @@ void Game::HandleFirstClickEvent() {
     if (isOwnPiece) {
 
         SetClickVariables(clickIdx);
-        srcPieceVectorIdx = FindPieceIdx(firstClickIdx);
+        srcPieceArrayIdx = FindPieceIdx(firstClickIdx);
         LookUpPossibleMoves();
     }
 }
@@ -283,7 +279,7 @@ void Game::HandleSecondClickEvent() {
     SetClickVariables(clickIdx, isOwnPiece);
 
     if (isOwnPiece) {
-        srcPieceVectorIdx = FindPieceIdx(firstClickIdx);
+        srcPieceArrayIdx = FindPieceIdx(firstClickIdx);
         LookUpPossibleMoves();
     }
 
@@ -291,7 +287,7 @@ void Game::HandleSecondClickEvent() {
     if (clickCount == 2) {
 
         // The piece at the square where the player wants to move
-        destPieceVectorIdx = FindPieceIdx(secondClickIdx);
+        destPieceArrayIdx = FindPieceIdx(secondClickIdx);
         bool isOpponentPiece = CheckIsOpponentPiece(secondClickIdx);
 
         if (moveGeneration.CheckCanMakeMove(secondClickIdx, possibleMoves)) {
@@ -356,7 +352,7 @@ void Game::ResetClickVariables() {
 
 void Game::LookUpPossibleMoves() {
 
-    switch (srcPieceVectorIdx) {
+    switch (srcPieceArrayIdx) {
         case 0 :
             possibleMoves = moveGeneration.GetWhitePawnsMoves(firstClickIdx);
             possibleMoves = moveGeneration.FilterPawnMoves(firstClickIdx, possibleMoves, activeColour, blackPieceBitboard);
@@ -415,7 +411,7 @@ void Game::LookUpPossibleMoves() {
 
 void Game::MovePiece(bool isOpponentPiece) {
     
-    uint64_t *ownBitboard = pieceVector[srcPieceVectorIdx];
+    uint64_t *ownBitboard = pieceArray[srcPieceArrayIdx];
     uint64_t *opponentBitboard = nullptr;
 
     // Toggle bits on own piece bitboards
@@ -423,22 +419,22 @@ void Game::MovePiece(bool isOpponentPiece) {
     *ownBitboard |= (1ULL << secondClickIdx);
 
     // Opponent bitboard referenced if user tries to take piece
-    if (isOpponentPiece && destPieceVectorIdx != INVALID_IDX)
-        opponentBitboard = pieceVector[destPieceVectorIdx];
+    if (isOpponentPiece && destPieceArrayIdx != INVALID_IDX)
+        opponentBitboard = pieceArray[destPieceArrayIdx];
     
     // Update bitboard (if not nullptr) to reflect taking a piece
     if (opponentBitboard)
         *opponentBitboard ^= (1ULL << secondClickIdx);
 
     // Update halfMove - if a pawn moves or a piece is taken, halfMove = 0
-    if (srcPieceVectorIdx == 0 || srcPieceVectorIdx == 6 || opponentBitboard) 
+    if (srcPieceArrayIdx == 0 || srcPieceArrayIdx == 6 || opponentBitboard) 
         halfMoveClock = 0;
     else 
         halfMoveClock++;
 
     // If halfMove == 50, the game is a draw
     if (halfMoveClock == 50)
-        isRunning = false;
+        isGameOver = true;
 
     // Incrememnt fullMove by 1 every time black moves
     if (activeColour == 'b')

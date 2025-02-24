@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include <vector>
+#include <array>
 #include <bitset>
 #include <cstdint>
 #include <map>
@@ -28,6 +29,8 @@ class MoveGeneration {
         uint64_t GetQueenMoves(int idx) {return queenLookupTable[idx];}
         uint64_t GetKingMoves(int idx) {return kingLookupTable[idx];}
 
+        uint64_t FilterRookMoves(int idx, uint64_t &ownBitBoard, uint64_t &oppBitBoard);
+        
         /* HELPER FUNCTIONS */
         // Sets the bit at idx to 1
         inline void SetBit(uint64_t &bitBoard, int idx);
@@ -71,15 +74,24 @@ class MoveGeneration {
         
         const uint64_t EMPTY_BITBOARD = 0ULL;
 
-        // These are used to check whether the piece can move without going off the board
+        // Used to check whether the piece can move without going off the board
         const uint64_t AFile = 0b0000000100000001000000010000000100000001000000010000000100000001ULL;
-        const uint64_t BFile = 0b0000001000000010000000100000001000000010000000100000001000000010ULL;
-        const uint64_t GFile = 0b0100000001000000010000000100000001000000010000000100000001000000ULL;
-        const uint64_t HFile = 0b1000000010000000100000001000000010000000100000001000000010000000ULL;
-        const uint64_t Rank8 = 0b0000000000000000000000000000000000000000000000000000000011111111ULL;
-        const uint64_t Rank7 = 0b0000000000000000000000000000000000000000000000001111111100000000ULL;
-        const uint64_t Rank2 = 0b0000000011111111000000000000000000000000000000000000000000000000ULL;
+        const uint64_t BFile = AFile << 1;
+        const uint64_t CFile = BFile << 1;
+        const uint64_t DFile = CFile << 1;
+        const uint64_t EFile = DFile << 1;
+        const uint64_t FFile = EFile << 1;
+        const uint64_t GFile = FFile << 1;
+        const uint64_t HFile = GFile << 1;
+
         const uint64_t Rank1 = 0b1111111100000000000000000000000000000000000000000000000000000000ULL;
+        const uint64_t Rank2 = Rank1 >> 8;
+        const uint64_t Rank3 = Rank2 >> 8;
+        const uint64_t Rank4 = Rank3 >> 8;
+        const uint64_t Rank5 = Rank4 >> 8;
+        const uint64_t Rank6 = Rank5 >> 8;
+        const uint64_t Rank7 = Rank6 >> 8;
+        const uint64_t Rank8 = Rank7 >> 8;
 
         const uint64_t OuterEdge = AFile | HFile | Rank1 | Rank8;
         const uint64_t InnerEdge = BFile | GFile | Rank2 | Rank7;

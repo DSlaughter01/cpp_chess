@@ -17,7 +17,7 @@ class GUI {
         void RenderScreen(std::string &fenString, int clickCount, int clickIdx, uint64_t possibleMoves);
 
         // Returns {x, y, w, h}
-        std::vector<int> GetBoardDimensions();
+        std::array<int, 4> GetBoardDimensions();
 
     private:
         /* INITIALISATION FUNCTIONS */

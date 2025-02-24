@@ -57,7 +57,7 @@ GUI::~GUI() {
 }
 
 
-std::vector<int> GUI::GetBoardDimensions() {
+std::array<int, 4> GUI::GetBoardDimensions() {
 
     return {sidePadding, 
             topPadding, 
@@ -103,7 +103,7 @@ void GUI::InitialiseBoard() {
    
 void GUI::LoadPieceTextures() {
 
-    std::vector<std::string> filenames = {"wP", "wR", "wN", "wB", "wQ", "wK",
+    std::array<std::string, 12> filenames = {"wP", "wR", "wN", "wB", "wQ", "wK",
                                           "bP", "bR", "bN", "bB", "bQ", "bK"};
 
     std::string tempName;

@@ -84,8 +84,7 @@ class Game {
         uint64_t possibleMoves;  
 
         // Looping bools for game state
-        bool isRunning;
-        bool isGameOver;
+        bool isRunning, isGameOver;
 
         // The board's physical dimensions, used to (in)validate click inputs
         int boardX, boardY, boardW, boardH, squareDim;
@@ -93,8 +92,7 @@ class Game {
         // Click variables
         const int INVALID_IDX = -1;
         int clickCount;
-        int firstClickIdx;
-        int secondClickIdx;
+        int firstClickIdx, secondClickIdx;
 
         // FEN
         const std::string initialFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -116,10 +114,9 @@ class Game {
         uint64_t bP, bR, bN, bB, bQ, bK;
         uint64_t whitePieceBitboard, blackPieceBitboard, allPieceBitboard;
 
-        // A vector containing all of the bitboards, used for piece lookup
-        std::vector<uint64_t*> pieceVector {};
-        int srcPieceVectorIdx;
-        int destPieceVectorIdx;
+        // An array containing all of the bitboards, used for piece lookup
+        std::array<uint64_t*, 12> pieceArray {};
+        int srcPieceArrayIdx, destPieceArrayIdx;
 
         // Used to convert between FEN strings and bitboards
         std::map<char, uint64_t*> charToBitboardMap;
