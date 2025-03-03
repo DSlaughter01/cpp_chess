@@ -10,7 +10,8 @@
 #include <sstream>
 #include "SDL2/SDL.h"
 #include "GUI.hpp"
-#include "MoveGeneration.hpp"
+#include "BitboardOps.hpp"
+#include "MoveGenerator.hpp"
 
 class Game {
 
@@ -24,12 +25,9 @@ class Game {
     private:
 
         GUI gui;
-        MoveGeneration moveGeneration;
+        MoveGenerator moveGenerator;
 
         /* HELPER FUNCTIONS */
-        // Sets the bit at idx to 1
-        inline void SetBit(uint64_t &bitBoard, int idx);
-
         // Checks if the player's own piece occupies the square at clickIdx
         inline bool CheckIsOwnPiece(int clickIdx);
 
@@ -68,7 +66,7 @@ class Game {
         void ResetClickVariables();
 
         /* PIECE MOVES */
-        // Queries moveGeneration to update possibleMoves according to the piece type clicked on and current game state 
+        // Queries moveGenerator to update possibleMoves according to the piece type clicked on and current game state 
         void LookUpPossibleMoves();
 
         // Updates own bitboard and opponent piece bitboard accordingly

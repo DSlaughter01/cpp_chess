@@ -32,11 +32,6 @@ Game::~Game() {
 }
 
 
-inline void Game::SetBit(uint64_t &bitBoard, int idx) {
-    bitBoard |= (1ULL << idx);
-}
-
-
 inline bool Game::CheckIsOwnPiece(int clickIdx) {
     
     if (activeColour == 'w') {
@@ -137,7 +132,7 @@ void Game::ConvertFenToGameVariables(std::string fenString) {
         // If the character is a letter
         else if (isalpha(fenString[stringIdx])) {
             // Map it to a bitboard, set the correct bit to 1
-            SetBit(*(charToBitboardMap[fenString[stringIdx]]), bitIdx);
+            BitboardOps::SetBit(*(charToBitboardMap[fenString[stringIdx]]), bitIdx);
 
             // Move to the next square
             bitIdx++;
@@ -290,7 +285,7 @@ void Game::HandleSecondClickEvent() {
         destPieceArrayIdx = FindPieceIdx(secondClickIdx);
         bool isOpponentPiece = CheckIsOpponentPiece(secondClickIdx);
 
-        if (moveGeneration.CheckCanMakeMove(secondClickIdx, possibleMoves)) {
+        if (moveGenerator.CheckCanMakeMove(secondClickIdx, possibleMoves)) {
 
             MovePiece(isOpponentPiece);
             
@@ -354,58 +349,54 @@ void Game::LookUpPossibleMoves() {
 
     switch (srcPieceArrayIdx) {
         case 0 :
-            possibleMoves = moveGeneration.GetWhitePawnsMoves(firstClickIdx);
-            possibleMoves = moveGeneration.FilterPawnMoves(firstClickIdx, possibleMoves, activeColour, blackPieceBitboard);
+            possibleMoves = moveGenerator.GetWhitePawnMoves(firstClickIdx, whitePieceBitboard, blackPieceBitboard);
             break;
 
         case 1 : 
-            possibleMoves = moveGeneration.GetRookMoves(firstClickIdx);
+            possibleMoves = moveGenerator.GetRookMoves('R', firstClickIdx, whitePieceBitboard, blackPieceBitboard);
             break;
-
+            
         case 2 : 
-            possibleMoves = moveGeneration.GetKnightMoves(firstClickIdx);
+            possibleMoves = moveGenerator.GetKnightMoves(firstClickIdx, whitePieceBitboard);
             break;
-
+            
         case 3 :
-            possibleMoves = moveGeneration.GetBishopMoves(firstClickIdx);
+            possibleMoves = moveGenerator.GetBishopMoves('B', firstClickIdx, whitePieceBitboard, blackPieceBitboard);
             break;
-
+            
         case 4 :
-            possibleMoves = moveGeneration.GetQueenMoves(firstClickIdx);
+            possibleMoves = moveGenerator.GetQueenMoves('Q', firstClickIdx, whitePieceBitboard, blackPieceBitboard);
             break;
 
         case 5 :
-            possibleMoves = moveGeneration.GetKingMoves(firstClickIdx);
+            possibleMoves = moveGenerator.GetKingMoves(firstClickIdx, whitePieceBitboard);
             break;
 
         case 6 :
-            possibleMoves = moveGeneration.GetBlackPawnsMoves(firstClickIdx);
-            possibleMoves = moveGeneration.FilterPawnMoves(firstClickIdx, possibleMoves, activeColour, whitePieceBitboard);
+            possibleMoves = moveGenerator.GetBlackPawnMoves(firstClickIdx, blackPieceBitboard, whitePieceBitboard);
             break;
-
+        
         case 7 : 
-            possibleMoves = moveGeneration.GetRookMoves(firstClickIdx);
+            possibleMoves = moveGenerator.GetRookMoves('r', firstClickIdx, blackPieceBitboard, whitePieceBitboard);
             break;
-
+            
         case 8 : 
-            possibleMoves = moveGeneration.GetKnightMoves(firstClickIdx);
+            possibleMoves = moveGenerator.GetKnightMoves(firstClickIdx, blackPieceBitboard);
             break;
-
+            
         case 9 :
-            possibleMoves = moveGeneration.GetBishopMoves(firstClickIdx);
+            possibleMoves = moveGenerator.GetBishopMoves('b', firstClickIdx, blackPieceBitboard, whitePieceBitboard);
             break;
-
+            
         case 10 :
-            possibleMoves = moveGeneration.GetQueenMoves(firstClickIdx);
+            possibleMoves = moveGenerator.GetQueenMoves('q', firstClickIdx, blackPieceBitboard, whitePieceBitboard);
             break;
-
+            
         case 11 :
-            possibleMoves = moveGeneration.GetKingMoves(firstClickIdx);
+            possibleMoves = moveGenerator.GetKingMoves(firstClickIdx, blackPieceBitboard);
             break;
     }
 
-    // Remove squares which are occupied by a player's own pieces
-    possibleMoves = (activeColour == 'w') ? possibleMoves &= ~whitePieceBitboard : possibleMoves &= ~blackPieceBitboard;
 }
 
 
@@ -454,6 +445,10 @@ void Game::UpdateVariablesAfterMove() {
 
     // Change player
     activeColour = (activeColour == 'w') ? 'b' : 'w';
+
+    // Update halfMove and fullMove
+    // If the piece that moved is a pawn, or if a piece was captured, reset halfMove to 0
+    // If not, increase by 1
 
     // TODO
     // Check if castling still possible
