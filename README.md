@@ -11,6 +11,6 @@ At each stage under the hood, bitboards are updated, and FEN strings created.
 
 The GUI reflects user input and game changes such as highlighting the selected piece, showing available moves for that piece, and only showing pieces that still remain on the board.
 
-The project is still in progress, and next steps will be including castling rights, correcting the half move clock and full move counter, and implementing conditions for check and check mate.
+The project is still in progress, and next steps will be including castling rights, and implementing conditions for check and check mate.
 
 Eventually, there is the potential for creating an AI opponent using a minimax approach with alpha-beta pruning and depth limitation.
