@@ -1,16 +1,19 @@
 #pragma once
+
 #include <iostream>
 #include <vector>
 #include <array>
+#include <bit>
 #include <bitset>
 #include <cstdint>
 #include <map>
+
 #include "BitboardOps.hpp"
 
-class MoveGenerator {
+class Moves {
 
     public:
-        MoveGenerator();
+        Moves();
 
         /* INITIALISATION FUNCTIONS - Setters */
         void GenerateWhitePawnMoves();
@@ -22,49 +25,25 @@ class MoveGenerator {
         void GenerateKnightMoves();
 
         /* GETTERS */
-        uint64_t GetWhitePawnMoves(int idx, uint64_t &ownBitboard, uint64_t &oppBitboard) {
-            return FilterPawnMoves('w', idx, whitePawnLookupTable[idx], ownBitboard, oppBitboard);
-        }
         
-        uint64_t GetBlackPawnMoves(int idx, uint64_t &ownBitboard, uint64_t &oppBitboard) {
-            return FilterPawnMoves('b', idx, blackPawnLookupTable[idx], ownBitboard, oppBitboard);
-        }
-
-        uint64_t GetKnightMoves(int idx, uint64_t &ownBitboard) {
-
-            uint64_t availableMoves = knightLookupTable[idx];
-            availableMoves &= ~ownBitboard;
-            return availableMoves;
-        }
-
-        uint64_t GetBishopMoves(char pieceType, int idx, uint64_t &ownBitboard, uint64_t &oppBitboard) {
-            return FilterSlideMoves(pieceType, idx, bishopLookupTable[idx], ownBitboard, oppBitboard);
-        }
-
-        uint64_t GetRookMoves(char pieceType, int idx, uint64_t &ownBitboard, uint64_t &oppBitboard) {
-            return FilterSlideMoves(pieceType, idx, rookLookupTable[idx], ownBitboard, oppBitboard);
-        }
-
-        uint64_t GetQueenMoves(char pieceType, int idx, uint64_t &ownBitboard, uint64_t &oppBitboard) {
-            return FilterSlideMoves(pieceType, idx, queenLookupTable[idx], ownBitboard, oppBitboard);
-        }
-
-        uint64_t GetKingMoves(int idx, uint64_t &ownBitboard) {
-
-            uint64_t availableMoves = kingLookupTable[idx];
-            availableMoves &= ~ownBitboard;
-            return availableMoves;
-        }
+        uint64_t GetMoves(char pieceType, int currentSquare, uint64_t &whiteBitboard, uint64_t &blackBitboard);
         
         /* HELPER FUNCTIONS */
-        // Checks whether targetSquareIdx is occupied by a piece from a specified bitboard
-        inline bool CheckIsOccupiedBy(int targetSquareIdx, uint64_t &bitboard);
-        
         // Checks whether the move the player wants to make is in the set of possible moves
         bool CheckCanMakeMove(int secondClickIdx, uint64_t &possibleMoves);
+
+        bool CheckCheck(char activeColour, std::map<char, uint64_t*> &charToBitboardMap, uint64_t &whiteBitboard, uint64_t &blackBitboard);
         
     private:
-        // Removes squares which the pawn cannot move to in the current board state
+        uint64_t GetWhitePawnMoves(int idx, uint64_t &ownBitboard, uint64_t &oppBitboard);
+        uint64_t GetBlackPawnMoves(int idx, uint64_t &ownBitboard, uint64_t &oppBitboard);
+        uint64_t GetKnightMoves(int idx, uint64_t &ownBitboard);
+        uint64_t GetBishopMoves(char pieceType, int idx, uint64_t &ownBitboard, uint64_t &oppBitboard);
+        uint64_t GetRookMoves(char pieceType, int idx, uint64_t &ownBitboard, uint64_t &oppBitboard);
+        uint64_t GetQueenMoves(char pieceType, int idx, uint64_t &ownBitboard, uint64_t &oppBitboard);
+        uint64_t GetKingMoves(int idx, uint64_t &ownBitboard);
+        
+        // Removes squares which the piece cannot move to in the current board state
         uint64_t FilterPawnMoves(char colour, int idx, uint64_t availableMoves, uint64_t &ownBitboard, uint64_t &oppBitboard);
         uint64_t FilterSlideMoves(char pieceType, int idx, uint64_t availableMoves, uint64_t &ownBitboard, uint64_t &oppBitboard);
         

@@ -1,6 +1,6 @@
-#include "MoveGenerator.hpp"
+#include "Moves.hpp"
 
-MoveGenerator::MoveGenerator() {
+Moves::Moves() {
 
     GenerateWhitePawnMoves();
     GenerateBlackPawnMoves();
@@ -12,52 +12,7 @@ MoveGenerator::MoveGenerator() {
 }
 
 
-uint64_t MoveGenerator::FilterPawnMoves(char colour, int idx, uint64_t availableMoves, uint64_t &ownBitboard, uint64_t &oppBitboard) {
-
-    if (colour == 'w') {
-        if ((oppBitboard & (1ULL << (idx + UP_LEFT))) == 0) 
-            availableMoves &= ~(1ULL << (idx + UP_LEFT));        
-        if ((oppBitboard & (1ULL << (idx + UP_RIGHT ))) == 0) 
-            availableMoves &= ~(1ULL << (idx + UP_RIGHT)); 
-
-        // Block the pawn if there is a piece in front of it 
-        if ((oppBitboard & (1ULL << (idx + UP))) || (ownBitboard & (1ULL << (idx + UP)))) {
-            availableMoves &= ~(1ULL << (idx + 2 * UP));
-            availableMoves &= ~(1ULL << (idx + UP));
-        }
-        if ((oppBitboard & (1ULL << (idx + 2 * UP))))
-            availableMoves &= ~(1ULL << (idx + 2 * UP));
-    }
-
-    else {
-        if ((oppBitboard & (1ULL << (idx + DOWN_RIGHT))) == 0) 
-            availableMoves &= ~(1ULL << (idx + DOWN_RIGHT));        
-        if ((oppBitboard & (1ULL << (idx + DOWN_LEFT))) == 0) 
-            availableMoves &= ~(1ULL << (idx + DOWN_LEFT)); 
-                   
-        // Block the pawn if there is a piece in front of it 
-        if ((oppBitboard & (1ULL << (idx + DOWN))) || (ownBitboard & (1ULL << (idx + DOWN)))) {
-            availableMoves &= ~(1ULL << (idx + 2 * DOWN));
-            availableMoves &= ~(1ULL << (idx + DOWN));
-        }
-        if ((oppBitboard & (1ULL << (idx + 2 * DOWN))))
-            availableMoves &= ~(1ULL << (idx + 2 * DOWN));
-    }
-
-    return availableMoves;
-}
-
-
-inline bool MoveGenerator::CheckIsOccupiedBy(int targetSquareIdx, uint64_t &bitboard) {
-
-    if ((bitboard & (1ULL << (targetSquareIdx))) == BitboardOps::EMPTY_BITBOARD) 
-        return false;
-    else 
-        return true;
-}
-
-
-bool MoveGenerator::CheckCanMakeMove(int secondClickIdx, uint64_t &possibleMoves) {
+bool Moves::CheckCanMakeMove(int secondClickIdx, uint64_t &possibleMoves) {
 
     if ((possibleMoves & (1ULL << secondClickIdx)) != BitboardOps::EMPTY_BITBOARD)
         return true;
@@ -66,7 +21,7 @@ bool MoveGenerator::CheckCanMakeMove(int secondClickIdx, uint64_t &possibleMoves
 }
 
 
-void MoveGenerator::GenerateWhitePawnMoves() {
+void Moves::GenerateWhitePawnMoves() {
 
     // White pawns move UP, UP_LEFT, UP_RIGHT, 2 * UP_RIGHT
 
@@ -105,7 +60,7 @@ void MoveGenerator::GenerateWhitePawnMoves() {
 }
 
 
-void MoveGenerator::GenerateBlackPawnMoves() {
+void Moves::GenerateBlackPawnMoves() {
 
     // Black pawns move: 2 * DOWN, DOWN, DOWN_LEFT, DOWN_RIGHT
 
@@ -144,7 +99,7 @@ void MoveGenerator::GenerateBlackPawnMoves() {
 }
 
 
-void MoveGenerator::GenerateKnightMoves() {
+void Moves::GenerateKnightMoves() {
 
     uint64_t ABFile = AFile | BFile;
     uint64_t GHFile = GFile | HFile;
@@ -208,7 +163,7 @@ void MoveGenerator::GenerateKnightMoves() {
 }
 
 
-void MoveGenerator::GenerateKingMoves() {
+void Moves::GenerateKingMoves() {
 
     std::array<int, 8> kingMoves = {UP, DOWN, LEFT, RIGHT, UP_LEFT, UP_RIGHT, DOWN_LEFT, DOWN_RIGHT};
 
@@ -256,7 +211,7 @@ void MoveGenerator::GenerateKingMoves() {
 }
 
 
-void MoveGenerator::GenerateBishopMoves() {
+void Moves::GenerateBishopMoves() {
 
     for (int squareIdx = 0; squareIdx < 64; squareIdx++) {
 
@@ -297,7 +252,7 @@ void MoveGenerator::GenerateBishopMoves() {
 }
 
 
-void MoveGenerator::GenerateRookMoves() {
+void Moves::GenerateRookMoves() {
 
     for (int squareIdx = 0; squareIdx < 64; squareIdx++) {
 
@@ -335,7 +290,7 @@ void MoveGenerator::GenerateRookMoves() {
 }
 
 
-void MoveGenerator::GenerateQueenMoves() {
+void Moves::GenerateQueenMoves() {
 
     for (int squareIdx = 0; squareIdx < 64; squareIdx++) {
 
@@ -378,7 +333,43 @@ void MoveGenerator::GenerateQueenMoves() {
 }
 
 
-uint64_t MoveGenerator::FilterSlideMoves(char pieceType, int idx, uint64_t availableMoves, uint64_t &ownBitboard, uint64_t &oppBitboard) {
+uint64_t Moves::FilterPawnMoves(char colour, int idx, uint64_t availableMoves, uint64_t &ownBitboard, uint64_t &oppBitboard) {
+
+    if (colour == 'w') {
+        if ((oppBitboard & (1ULL << (idx + UP_LEFT))) == 0) 
+            availableMoves &= ~(1ULL << (idx + UP_LEFT));        
+        if ((oppBitboard & (1ULL << (idx + UP_RIGHT ))) == 0) 
+            availableMoves &= ~(1ULL << (idx + UP_RIGHT)); 
+
+        // Block the pawn if there is a piece in front of it 
+        if ((oppBitboard & (1ULL << (idx + UP))) || (ownBitboard & (1ULL << (idx + UP)))) {
+            availableMoves &= ~(1ULL << (idx + 2 * UP));
+            availableMoves &= ~(1ULL << (idx + UP));
+        }
+        if ((oppBitboard & (1ULL << (idx + 2 * UP))))
+            availableMoves &= ~(1ULL << (idx + 2 * UP));
+    }
+
+    else {
+        if ((oppBitboard & (1ULL << (idx + DOWN_RIGHT))) == 0) 
+            availableMoves &= ~(1ULL << (idx + DOWN_RIGHT));        
+        if ((oppBitboard & (1ULL << (idx + DOWN_LEFT))) == 0) 
+            availableMoves &= ~(1ULL << (idx + DOWN_LEFT)); 
+                   
+        // Block the pawn if there is a piece in front of it 
+        if ((oppBitboard & (1ULL << (idx + DOWN))) || (ownBitboard & (1ULL << (idx + DOWN)))) {
+            availableMoves &= ~(1ULL << (idx + 2 * DOWN));
+            availableMoves &= ~(1ULL << (idx + DOWN));
+        }
+        if ((oppBitboard & (1ULL << (idx + 2 * DOWN))))
+            availableMoves &= ~(1ULL << (idx + 2 * DOWN));
+    }
+
+    return availableMoves;
+}
+
+
+uint64_t Moves::FilterSlideMoves(char pieceType, int idx, uint64_t availableMoves, uint64_t &ownBitboard, uint64_t &oppBitboard) {
 
     // Change pieceType to lowerCase
     pieceType = std::tolower(pieceType);
@@ -420,4 +411,144 @@ uint64_t MoveGenerator::FilterSlideMoves(char pieceType, int idx, uint64_t avail
     }
 
     return availableMoves;
+}
+
+uint64_t Moves::GetWhitePawnMoves(int idx, uint64_t &ownBitboard, uint64_t &oppBitboard) {
+    return FilterPawnMoves('w', idx, whitePawnLookupTable[idx], ownBitboard, oppBitboard);
+}
+
+uint64_t Moves::GetBlackPawnMoves(int idx, uint64_t &ownBitboard, uint64_t &oppBitboard) {
+    return FilterPawnMoves('b', idx, blackPawnLookupTable[idx], ownBitboard, oppBitboard);
+}
+
+uint64_t Moves::GetKnightMoves(int idx, uint64_t &ownBitboard) {
+
+    uint64_t availableMoves = knightLookupTable[idx];
+    availableMoves &= ~ownBitboard;
+    return availableMoves;
+}
+
+uint64_t Moves::GetBishopMoves(char pieceType, int idx, uint64_t &ownBitboard, uint64_t &oppBitboard) {
+    return FilterSlideMoves(pieceType, idx, bishopLookupTable[idx], ownBitboard, oppBitboard);
+}
+
+uint64_t Moves::GetRookMoves(char pieceType, int idx, uint64_t &ownBitboard, uint64_t &oppBitboard) {
+    return FilterSlideMoves(pieceType, idx, rookLookupTable[idx], ownBitboard, oppBitboard);
+}
+
+uint64_t Moves::GetQueenMoves(char pieceType, int idx, uint64_t &ownBitboard, uint64_t &oppBitboard) {
+    return FilterSlideMoves(pieceType, idx, queenLookupTable[idx], ownBitboard, oppBitboard);
+}
+
+uint64_t Moves::GetKingMoves(int idx, uint64_t &ownBitboard) {
+
+    uint64_t availableMoves = kingLookupTable[idx];
+    availableMoves &= ~ownBitboard;
+    return availableMoves;
+}
+
+uint64_t Moves::GetMoves(char pieceType, int currentSquare, uint64_t &whiteBitboard, uint64_t &blackBitboard) {
+
+    switch (pieceType) {
+
+        // Pawns
+        case 'P':
+            return GetWhitePawnMoves(currentSquare, whiteBitboard, blackBitboard);
+            break;
+        case 'p':
+            return GetBlackPawnMoves(currentSquare, blackBitboard, whiteBitboard);
+            break;
+    
+        // Rooks
+        case 'R':
+            return GetRookMoves('R', currentSquare, whiteBitboard, blackBitboard);
+            break;
+        case 'r':
+            return GetRookMoves('r', currentSquare, blackBitboard, whiteBitboard);
+            break;
+
+        // Knight
+        case 'N':
+            return GetKnightMoves(currentSquare, whiteBitboard);
+            break;
+        case 'n':
+            return GetKnightMoves(currentSquare, blackBitboard);
+            break;
+
+        // Bishop
+        case 'B':
+            return GetBishopMoves('B', currentSquare, whiteBitboard, blackBitboard);
+            break;
+        case 'b':
+            return GetBishopMoves('b', currentSquare, blackBitboard, whiteBitboard);
+            break;
+
+        // Queen
+        case 'Q':
+            return GetQueenMoves('Q', currentSquare, whiteBitboard, blackBitboard);
+            break;
+        case 'q':
+            return GetQueenMoves('q', currentSquare, blackBitboard, whiteBitboard);
+            break;
+
+        // King
+        case 'K':
+            return GetKingMoves(currentSquare, whiteBitboard);
+            break;
+        case 'k':
+            return GetKingMoves(currentSquare, blackBitboard);
+            break;
+
+        default:
+            return BitboardOps::EMPTY_BITBOARD;
+            break;
+    }
+}
+
+
+bool Moves::CheckCheck(char activeColour, std::map<char, uint64_t*> &charToBitboardMap, uint64_t &whiteBitboard, uint64_t &blackBitboard) {
+
+    // Retrieve the index of the opposing king and the attacking pieces (5 different types, not including the king which cannot take the other king)
+    std::array<char, 5> attackingPieces;
+    uint64_t* defendingKingBb;
+
+    if (activeColour == 'b') {
+        attackingPieces = {'p', 'r', 'n', 'b', 'q'};
+        defendingKingBb = charToBitboardMap['K'];
+    }
+    else if (activeColour == 'w') {
+        attackingPieces = {'P', 'R', 'N', 'B', 'Q'};
+        defendingKingBb = charToBitboardMap['k'];
+    }
+
+    // std::countr_zero(*defendingKingBb);
+    
+    // Cycle through each attacking piece type
+    for (auto &piece : attackingPieces) {
+        
+        // Access the bitboard for that piece (early exit for empty bitboards)
+        uint64_t* pieceBb = charToBitboardMap[piece];
+        if (*pieceBb == BitboardOps::EMPTY_BITBOARD)
+            continue;
+
+        uint64_t attackMoves {};
+
+        // See which square the piece is on (seems inefficient, doing worst case 320 iterations? Thought about cutting short on queen because there is only one but after promotion could be more. Could query own bitboard to see presence, then would have do fewer iterations, also could use leading and trailing zeros to not loop over entire board but just from the first to the last. Would work well on cases where pieces are close together)
+        for (int i = 0; i < 64; i++) {
+
+            if ((1ULL << i) & *pieceBb) {
+
+                // Check which moves the piece has available
+                attackMoves = GetMoves(piece, i, whiteBitboard, blackBitboard);
+                
+                // See if any of these is an attack on the king
+                 if (BitboardOps::HasIntersection(attackMoves, *defendingKingBb)) {
+                    std::cout << "Check!" << std::endl;
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
 }

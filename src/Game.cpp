@@ -1,10 +1,6 @@
 #include "Game.hpp"
 
-Game::Game() :
-    isRunning(true), isGameOver(false), 
-    clickCount(0), firstClickIdx(INVALID_IDX), secondClickIdx(INVALID_IDX),
-    possibleMoves(0ULL), srcPieceArrayIdx(INVALID_IDX), destPieceArrayIdx(INVALID_IDX),
-    currentFen(initialFen), castlingRights({}), enPassantTarget("-")
+Game::Game()
     {
 
     // Initialise SDL
@@ -14,8 +10,31 @@ Game::Game() :
         return;
     }
 
-    InitialiseFenConversionMaps();
-    InitialiseBitboards();
+
+    charToBitboardMap = {
+        {'P', &wP}, {'R', &wR}, {'N', &wN}, {'B', &wB}, {'Q', &wQ}, {'K', &wK},
+        {'p', &bP}, {'r', &bR}, {'n', &bN}, {'b', &bB}, {'q', &bQ}, {'k', &bK}
+    };
+
+    bitboardToCharMap = {
+        {&wP, 'P'}, {&wR, 'R'}, {&wN, 'N'}, {&wB, 'B'}, {&wQ, 'Q'}, {&wK, 'K'},
+        {&bP, 'p'}, {&bR, 'r'}, {&bN, 'n'}, {&bB, 'b'}, {&bQ, 'q'}, {&bK, 'k'}
+    };
+
+    wP = wR = wN = wB = wQ = wK = BitboardOps::EMPTY_BITBOARD;
+    bP = bR = bN = bB = bQ = bK = BitboardOps::EMPTY_BITBOARD;
+
+    // Populate bitboards and other game variables
+    ConvertFenToGameVariables(initialFen);
+
+    // Store references to bitboards
+    pieceArray = {&wP, &wR, &wN, &wB, &wQ, &wK, 
+                    &bP, &bR, &bN, &bB, &bQ, &bK};
+
+    // Update composite bitboards
+    whiteBitboard = wP | wR | wN | wB | wQ | wK;
+    blackBitboard = bP | bR | bN | bB | bQ | bK;
+    allPieceBitboard = whiteBitboard | blackBitboard;
 
     std::array<int, 4> boardDimensions = gui.GetBoardDimensions();
     boardX = boardDimensions[0];
@@ -35,14 +54,14 @@ Game::~Game() {
 inline bool Game::CheckIsOwnPiece(int clickIdx) {
     
     if (activeColour == 'w') {
-        if ((whitePieceBitboard & (1ULL << clickIdx)) != 0) 
+        if ((whiteBitboard & (1ULL << clickIdx)) != 0) 
             return true;
         else
             return false;
     }
 
     else {
-        if ((blackPieceBitboard & (1ULL << clickIdx)) != 0) 
+        if ((blackBitboard & (1ULL << clickIdx)) != 0) 
             return true;
         else
             return false;
@@ -53,14 +72,14 @@ inline bool Game::CheckIsOwnPiece(int clickIdx) {
 inline bool Game::CheckIsOpponentPiece(int clickIdx) {
 
     if (activeColour == 'w') {
-        if ((blackPieceBitboard & (1ULL << clickIdx)) != 0) 
+        if ((blackBitboard & (1ULL << clickIdx)) != 0) 
             return true;
         else
             return false;
     }
 
     else {
-        if ((whitePieceBitboard & (1ULL << clickIdx)) != 0) 
+        if ((whiteBitboard & (1ULL << clickIdx)) != 0) 
             return true;
         else
             return false;
@@ -72,48 +91,17 @@ inline int Game::FindPieceIdx(int clickIdx) {
 
     // Get the correct piece type
     for (int i = 0; i < 12; i++) {
-        if ((*pieceArray[i] & (1ULL << clickIdx)) != 0ULL)
+        if ((*pieceArray[i] & (1ULL << clickIdx)) != BitboardOps::EMPTY_BITBOARD)
             return i;     
     }
 
-    return -1;
+    return INVALID_IDX;
 }
 
 
-void Game::InitialiseFenConversionMaps() {
-    
-    charToBitboardMap = {
-        {'P', &wP}, {'R', &wR}, {'N', &wN}, {'B', &wB}, {'Q', &wQ}, {'K', &wK},
-        {'p', &bP}, {'r', &bR}, {'n', &bN}, {'b', &bB}, {'q', &bQ}, {'k', &bK}
-    };
-
-    bitboardToCharMap = {
-        {&wP, 'P'}, {&wR, 'R'}, {&wN, 'N'}, {&wB, 'B'}, {&wQ, 'Q'}, {&wK, 'K'},
-        {&bP, 'p'}, {&bR, 'r'}, {&bN, 'n'}, {&bB, 'b'}, {&bQ, 'q'}, {&bK, 'k'}
-    };
-}
-
-
-void Game::InitialiseBitboards() {
-
-    // Set bitboard to empty
-    wP = wR = wN = wB = wQ = wK = 0ULL;
-    bP = bR = bN = bB = bQ = bK = 0ULL;
-
-    // Populate bitboards and other game variables
-    ConvertFenToGameVariables(initialFen);
-
-    // Store references to bitboards
-    pieceArray = {&wP, &wR, &wN, &wB, &wQ, &wK, 
-                   &bP, &bR, &bN, &bB, &bQ, &bK};
-
-    // Update composite bitboards
-    whitePieceBitboard = wP | wR | wN | wB | wQ | wK;
-    blackPieceBitboard = bP | bR | bN | bB | bQ | bK;
-    allPieceBitboard = whitePieceBitboard | blackPieceBitboard;
-}
-
-
+// This is a bit of a weird function because it could be used to reconstruct a game from a FEN string,
+// but it's actually only being used at the beginning of the programme, so castling rights are cleared and 
+// reconstructed when they could just be set to start with
 void Game::ConvertFenToGameVariables(std::string fenString) {
 
     castlingRights.clear();
@@ -283,11 +271,10 @@ void Game::HandleSecondClickEvent() {
 
         // The piece at the square where the player wants to move
         destPieceArrayIdx = FindPieceIdx(secondClickIdx);
-        bool isOpponentPiece = CheckIsOpponentPiece(secondClickIdx);
 
-        if (moveGenerator.CheckCanMakeMove(secondClickIdx, possibleMoves)) {
+        if (moves.CheckCanMakeMove(secondClickIdx, possibleMoves)) {
 
-            MovePiece(isOpponentPiece);
+            MovePiece();
             
             // Update game variables
             UpdateVariablesAfterMove();
@@ -347,60 +334,14 @@ void Game::ResetClickVariables() {
 
 void Game::LookUpPossibleMoves() {
 
-    switch (srcPieceArrayIdx) {
-        case 0 :
-            possibleMoves = moveGenerator.GetWhitePawnMoves(firstClickIdx, whitePieceBitboard, blackPieceBitboard);
-            break;
-
-        case 1 : 
-            possibleMoves = moveGenerator.GetRookMoves('R', firstClickIdx, whitePieceBitboard, blackPieceBitboard);
-            break;
-            
-        case 2 : 
-            possibleMoves = moveGenerator.GetKnightMoves(firstClickIdx, whitePieceBitboard);
-            break;
-            
-        case 3 :
-            possibleMoves = moveGenerator.GetBishopMoves('B', firstClickIdx, whitePieceBitboard, blackPieceBitboard);
-            break;
-            
-        case 4 :
-            possibleMoves = moveGenerator.GetQueenMoves('Q', firstClickIdx, whitePieceBitboard, blackPieceBitboard);
-            break;
-
-        case 5 :
-            possibleMoves = moveGenerator.GetKingMoves(firstClickIdx, whitePieceBitboard);
-            break;
-
-        case 6 :
-            possibleMoves = moveGenerator.GetBlackPawnMoves(firstClickIdx, blackPieceBitboard, whitePieceBitboard);
-            break;
-        
-        case 7 : 
-            possibleMoves = moveGenerator.GetRookMoves('r', firstClickIdx, blackPieceBitboard, whitePieceBitboard);
-            break;
-            
-        case 8 : 
-            possibleMoves = moveGenerator.GetKnightMoves(firstClickIdx, blackPieceBitboard);
-            break;
-            
-        case 9 :
-            possibleMoves = moveGenerator.GetBishopMoves('b', firstClickIdx, blackPieceBitboard, whitePieceBitboard);
-            break;
-            
-        case 10 :
-            possibleMoves = moveGenerator.GetQueenMoves('q', firstClickIdx, blackPieceBitboard, whitePieceBitboard);
-            break;
-            
-        case 11 :
-            possibleMoves = moveGenerator.GetKingMoves(firstClickIdx, blackPieceBitboard);
-            break;
-    }
-
+    char pieceType = bitboardToCharMap[pieceArray[srcPieceArrayIdx]];
+    possibleMoves = moves.GetMoves(pieceType, firstClickIdx, whiteBitboard, blackBitboard);
 }
 
 
-void Game::MovePiece(bool isOpponentPiece) {
+void Game::MovePiece() {
+
+    bool isOpponentPiece = CheckIsOpponentPiece(secondClickIdx);
     
     uint64_t *ownBitboard = pieceArray[srcPieceArrayIdx];
     uint64_t *opponentBitboard = nullptr;
@@ -414,11 +355,19 @@ void Game::MovePiece(bool isOpponentPiece) {
         opponentBitboard = pieceArray[destPieceArrayIdx];
     
     // Update bitboard (if not nullptr) to reflect taking a piece
-    if (opponentBitboard)
-        *opponentBitboard ^= (1ULL << secondClickIdx);
+    if (opponentBitboard) {
+        *opponentBitboard ^= (1ULL << secondClickIdx);   
+        pieceTaken = true;
+    } 
 
+    moves.CheckCheck(activeColour, charToBitboardMap, whiteBitboard, blackBitboard);
+}
+
+
+void Game::UpdateVariablesAfterMove() {
+    
     // Update halfMove - if a pawn moves or a piece is taken, halfMove = 0
-    if (srcPieceArrayIdx == 0 || srcPieceArrayIdx == 6 || opponentBitboard) 
+    if (srcPieceArrayIdx == 0 || srcPieceArrayIdx == 6 || pieceTaken) 
         halfMoveClock = 0;
     else 
         halfMoveClock++;
@@ -429,31 +378,19 @@ void Game::MovePiece(bool isOpponentPiece) {
 
     // Incrememnt fullMove by 1 every time black moves
     if (activeColour == 'b')
-        fullMove++;    
-}
-
-
-void Game::UpdateVariablesAfterMove() {
+        fullMove++;
 
     ResetClickVariables();
-    possibleMoves = 0ULL;
+    possibleMoves = BitboardOps::EMPTY_BITBOARD;
+    pieceTaken = false;
 
     // Update composite bitboards
-    whitePieceBitboard = wP | wR | wN | wB | wQ | wK;
-    blackPieceBitboard = bP | bR | bN | bB | bQ | bK;
-    allPieceBitboard = whitePieceBitboard | blackPieceBitboard;
+    whiteBitboard = wP | wR | wN | wB | wQ | wK;
+    blackBitboard = bP | bR | bN | bB | bQ | bK;
+    allPieceBitboard = whiteBitboard | blackBitboard;
 
     // Change player
     activeColour = (activeColour == 'w') ? 'b' : 'w';
-
-    // Update halfMove and fullMove
-    // If the piece that moved is a pawn, or if a piece was captured, reset halfMove to 0
-    // If not, increase by 1
-
-    // TODO
-    // Check if castling still possible
-        // If either rook moves, then one of the options is removed
-        // If the king moves, both options are removed
 }
 
 

@@ -10,7 +10,7 @@ void BitboardOps::ClearBit(uint64_t &bitboard, int idx) {
 
 bool BitboardOps::HasIntersection(uint64_t &bb1, uint64_t &bb2) {
     
-    if (bb1 & bb2 != BitboardOps::EMPTY_BITBOARD)
+    if ((bb1 & bb2) != BitboardOps::EMPTY_BITBOARD)
         return true;
     else
         return false;
